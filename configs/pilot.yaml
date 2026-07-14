@@ -1,0 +1,28 @@
+# Pilot run config: n=20 subset of the main experiment, conditions A/B/C1.
+# Identical to experiment.yaml except sample size and output directory.
+provider: anthropic
+model: claude-sonnet-4-6       # pin exact model version in the paper
+temperature: 0.0               # deterministic main runs
+robustness_temperature: 0.7    # secondary runs
+robustness_seeds: [13, 42, 2026]
+
+dataset:
+  name: gsm8k                  # gsm8k | hotpotqa
+  split: test
+  n_problems: 20
+  sample_seed: 42              # fixed sample => paired comparisons valid
+
+conditions:
+  A: {pipeline: false}                                   # single agent baseline
+  B: {pipeline: true,  inject_stage: null, verifier: true}   # clean pipeline
+  C1: {pipeline: true, inject_stage: decomposer, verifier: true}
+  C2: {pipeline: true, inject_stage: solver,     verifier: true}
+  D1: {pipeline: true, inject_stage: decomposer, verifier: false}  # ablation
+  D2: {pipeline: true, inject_stage: solver,     verifier: false}
+
+injection:
+  types: [number_swap, operation_flip]
+  seed: 7
+
+output_dir: results/traces_pilot
+max_tokens: 1024
