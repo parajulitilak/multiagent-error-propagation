@@ -1,7 +1,7 @@
 % =========================================================================
 % Which Verifier Catches What? Mapping Error Severity to Verifier Strategy
 % in Multi-Agent LLM Pipelines
-% SISTER 2026 --- AI/ML Track (Dubai CS Society + Delta Rising Foundation)
+% SISTER 2026, AI/ML Track (Dubai CS Society + Delta Rising Foundation)
 %
 % Self-contained: compiles on Overleaf as-is (pdfLaTeX). Structure follows
 % the SISTER research template: I Introduction, II Methods, III Results,
@@ -27,13 +27,13 @@
 
 \title{\bf Which Verifier Catches What? Mapping Error Severity\\to Verifier Strategy in Multi-Agent LLM Pipelines}
 \author{Tilak Parajuli\\
-\small SISTER 2026, AI/ML Track --- Dubai Computer Science Society \& Delta Rising Foundation\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
 \small Kathmandu, Nepal
 \and Johnny Kozman\\
-\small SISTER 2026, AI/ML Track --- Dubai Computer Science Society \& Delta Rising Foundation\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
 \small Cairo, Egypt
 \and Arushi Waddepalli\\
-\small SISTER 2026, AI/ML Track --- Dubai Computer Science Society \& Delta Rising Foundation\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
 \small Hyderabad, India}
 \date{August 2026}
 
@@ -41,8 +41,8 @@
 \maketitle
 
 \begin{abstract}
-Pipelines of specialized LLM agents---one agent plans, another executes, a
-third verifies---are now a default design for applied language-model systems.
+Pipelines of specialized LLM agents (one plans, another executes, a third
+verifies) are now a default design for applied language-model systems.
 The design carries an implicit promise: later stages should absorb the
 mistakes of earlier ones. Whether they actually do is unresolved. Failure
 taxonomies built from deployed systems describe \emph{what} goes wrong but,
@@ -103,8 +103,8 @@ reasons?
 
 We make that measurement. Borrowing fault injection from software
 reliability engineering, we corrupt exactly one intermediate artifact of a
-Decomposer--Solver--Verifier pipeline---swapping a quantity or inverting an
-arithmetic operation---and let the remaining stages run untouched. Because
+Decomposer--Solver--Verifier pipeline (swapping a quantity or inverting an
+arithmetic operation) and let the remaining stages run untouched. Because
 the fault is planted by us, its origin is known by construction, and every
 downstream outcome can be attributed. Each fault carries a pre-registered
 severity level, and because every stage output is stored, the verification
@@ -143,8 +143,8 @@ without external signals such revision often fails on reasoning tasks, and
 LLM-as-judge evaluation carries known biases~\citep{zheng2023judge}; our
 verifier ablation estimates, under identical inputs, how much a review stage
 changes the fate of a known error. Finally, failure analysis:
-MAST~\citep{cemri2025mast} provides the vocabulary---specification failures,
-inter-agent misalignment, verification failures---and we adopt it, but where
+MAST~\citep{cemri2025mast} provides the vocabulary (specification failures,
+inter-agent misalignment, verification failures) and we adopt it, but where
 MAST classifies failures that occurred in the wild, we induce failures under
 control; the two are complementary in the way epidemiology and randomized
 trials are. Mitigation systems are now being engineered against exactly this
@@ -306,7 +306,7 @@ with odds ratio from the logistic model (H2).}
 rates stratified by severity level, with odds ratios from the logistic model
 (H4).}
 
-\textbf{What does the verifier buy?} \pending{C1 vs.\ D1 and C2 vs.\ D2:
+\textbf{What does the verifier contribute?} \pending{C1 vs.\ D1 and C2 vs.\ D2:
 propagation with and without the verifier; the difference is the verifier's
 causal contribution.}
 
@@ -344,8 +344,8 @@ sentence on what changes for practitioners (where to spend verification
 budget and which verifier strategy to choose), one sentence on next steps.}
 
 \paragraph{Broader impact.} Agent pipelines increasingly mediate consequential
-work. Measuring where errors survive---and how much verification actually
-helps---informs where guardrails belong; we do not foresee direct misuse
+work. Measuring where errors survive, and how much verification actually
+helps, informs where guardrails belong; we do not foresee direct misuse
 enabled by these measurements.
 
 \paragraph{Reproducibility.} Code, prompts, configuration, and full traces:
