@@ -79,11 +79,14 @@ contributes.
 We close that gap experimentally. Because each fault is planted by us, ground
 truth about the origin of every downstream failure is known by construction,
 turning ``agents sometimes fail'' into a measurable, attributable quantity.
-We ask four questions. (H1)~Do injected faults survive to the final answer
-more often than chance? (H2)~Do earlier faults survive more often than later
-ones? (H3)~How much propagation does the verifier actually prevent? (H4)~Can
-a small fine-tuned verifier match a large LLM judge at a fraction of the
-cost?
+
+This study aims to answer three specific research questions:
+
+\begin{itemize}
+    \item \textbf{RQ1 (Severity):} How does error severity (mild/moderate/severe) affect propagation rates? Do verifiers only catch fatal errors, or are they sensitive to subtle slips?
+    \item \textbf{RQ2 (Verifier Strategy):} How does verifier prompt strategy (direct vs chain-of-thought vs rubric) affect catch rates for different error types and severities?
+    \item \textbf{RQ3 (The Map):} How does injection stage (Planner vs Solver) interact with error type, severity, and verifier strategy to determine catch rates? A full map is produced identifying which verifier catches which error, where it was injected, and how severe it was.
+\end{itemize}
 
 The design meets the program's stated criteria directly: public data with
 defined ground truth (GSM8K, HotpotQA); a simple baseline (single agent);
