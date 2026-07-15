@@ -8,8 +8,13 @@ ablation, and paired statistical testing.
 Author: Tilak Parajuli
 
 ## Research question
-When LLM agents are chained into a pipeline, do mistakes made by early agents
-get caught, corrected, or amplified by later agents?
+This study investigates three dimensions of error propagation:
+
+- **RQ1 (Severity):** How does error severity (mild/moderate/severe) affect propagation rates? Do verifiers only catch fatal errors, or are they sensitive to subtle slips?
+
+- **RQ2 (Verifier Strategy):** How does verifier prompt strategy (direct vs chain-of-thought vs rubric) affect catch rates for different error types and severities?
+
+- **RQ3 (The Map):** How does injection stage (Planner vs Solver) interact with error type, severity, and verifier strategy to determine catch rates? We produce a full map of which verifier catches which error, where it was injected, and how severe it was.
 
 ## Design
 | Condition | Description |
