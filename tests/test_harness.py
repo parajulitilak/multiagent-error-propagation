@@ -80,6 +80,70 @@ class TestNumberSwap(unittest.TestCase):
             self.assertNotEqual(meta["old"], meta["new"])
 
 
+class TestSeverity(unittest.TestCase):
+    def test_mild_stays_under_15_percent(self):
+        for seed in range(30):
+            _, meta = number_swap("there are 100 apples and 40 pears",
+                                  random.Random(seed), "mild")
+            self.assertTrue(meta["applied"])
+            self.assertEqual(meta["severity"], "mild")
+            self.assertLess(meta["relative_change"], 0.15)
+
+    def test_moderate_within_30_to_60_percent(self):
+        for seed in range(30):
+            _, meta = number_swap("there are 100 apples and 40 pears",
+                                  random.Random(seed), "moderate")
+            self.assertEqual(meta["severity"], "moderate")
+            self.assertGreaterEqual(meta["relative_change"], 0.30)
+            self.assertLessEqual(meta["relative_change"], 0.60)
+
+    def test_severe_above_200_percent_or_sign_flip(self):
+        for seed in range(30):
+            _, meta = number_swap("there are 10 boxes", random.Random(seed), "severe")
+            self.assertEqual(meta["severity"], "severe")
+            self.assertTrue(meta["sign_flip"] or meta["relative_change"] > 2.0)
+
+    def test_small_integer_escalates_from_mild(self):
+        # 3 cannot change by under 15%, so mild must escalate and say so.
+        _, meta = number_swap("use 3 eggs", random.Random(0), "mild")
+        self.assertTrue(meta["applied"])
+        self.assertEqual(meta["severity_target"], "mild")
+        self.assertNotEqual(meta["severity"], "mild")
+        self.assertNotEqual(meta["old"], meta["new"])
+
+    def test_zero_still_gets_changed(self):
+        _, meta = number_swap("the score is 0 now", random.Random(0), "mild")
+        self.assertTrue(meta["applied"])
+        self.assertNotEqual(meta["new"], "0")
+        self.assertEqual(meta["severity"], "severe")
+
+    def test_targets_cycle_balanced(self):
+        injector = make_injector(["number_swap"], seed=7)
+        targets = []
+        for _ in range(9):
+            _, meta = injector("there are 120 marbles in 40 bags")
+            self.assertTrue(meta["applied"])
+            targets.append(meta["severity_target"])
+        self.assertEqual(targets.count("mild"), 3)
+        self.assertEqual(targets.count("moderate"), 3)
+        self.assertEqual(targets.count("severe"), 3)
+
+    def test_comma_grouping_preserved_under_severe(self):
+        corrupted, meta = number_swap("She paid $1,234 for it.",
+                                      random.Random(1), "severe")
+        self.assertEqual(meta["severity"], "severe")
+        self.assertNotIn("1,234", corrupted.replace(meta["new"], ""))
+        if "," in corrupted and not meta["sign_flip"]:
+            self.assertRegex(corrupted, r"\$\d{1,3}(?:,\d{3})+")
+
+    def test_value_always_changes_across_levels(self):
+        for level in ("mild", "moderate", "severe"):
+            for seed in range(30):
+                _, meta = number_swap("there are 10 boxes and 7 cats",
+                                      random.Random(seed), level)
+                self.assertNotEqual(meta["old"], meta["new"])
+
+
 class TestOperationFlip(unittest.TestCase):
     def test_flips_to_opposite(self):
         corrupted, meta = operation_flip("add the totals", random.Random(0))

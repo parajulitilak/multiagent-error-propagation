@@ -61,7 +61,8 @@ def run_condition(name: str, spec: dict, items: list, cfg: dict, out_dir: pathli
                   dry_run: bool = False, overwrite: bool = False):
     injector = None
     if spec.get("inject_stage"):
-        injector = make_injector(cfg["injection"]["types"], cfg["injection"]["seed"])
+        injector = make_injector(cfg["injection"]["types"], cfg["injection"]["seed"],
+                                 cfg["injection"].get("severity"))
     rng = random.Random(cfg["injection"]["seed"])
 
     out_path = out_dir / f"{name}.jsonl"
