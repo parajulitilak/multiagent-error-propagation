@@ -164,12 +164,9 @@ effects of injection position and fault severity, under paired statistical
 tests. (iii)~A verifier ablation that isolates the causal contribution of the
 verification stage. (iv)~A strategy-level map of verification: catch and
 correction rates for three verifier prompt strategies across error types and
-severities, obtained by replaying identical stored traces.
-\pending{(v)~A 1.5B-parameter verifier fine-tuned with
-QLoRA~\citep{dettmers2023qlora} on our own traces, compared against an LLM
-judge on catch rate and cost.} (vi)~Code, prompts, configuration, and
-complete traces, sufficient to regenerate every number in this paper from one
-script.
+severities, obtained by replaying identical stored traces. (v)~Code,
+prompts, configuration, and complete traces, sufficient to regenerate every
+number in this paper from one script.
 
 \section{Methods}
 
@@ -300,11 +297,11 @@ caught-and-corrected / caught-not-corrected / silently-propagated /
 absorbed)}.
 
 \textbf{Does position matter?} \pending{Propagation rate by injection stage
-with odds ratio from the logistic model (H2).}
+with odds ratio from the logistic model (RQ3).}
 
 \textbf{Does severity matter?} \pending{Propagation, catch, and correction
 rates stratified by severity level, with odds ratios from the logistic model
-(H4).}
+(RQ1).}
 
 \textbf{What does the verifier contribute?} \pending{C1 vs.\ D1 and C2 vs.\ D2:
 propagation with and without the verifier; the difference is the verifier's
@@ -312,11 +309,7 @@ causal contribution.}
 
 \textbf{Which verifier catches what?} \pending{Catch and correction rates per
 prompt strategy (V1/V2/V3) by error type and severity; summary map in
-Table~\ref{tab:map} (H5).}
-
-\textbf{Can a small verifier compete?} \pending{QLoRA-fine-tuned 1.5B
-verifier vs.\ the LLM judge: catch rate, correction rate, and cost per caught
-fault (H6).}
+Table~\ref{tab:map} (RQ2, RQ3).}
 
 \begin{figure}[t]\centering
 \caption{Accuracy by condition with 95\% bootstrap intervals.
@@ -368,10 +361,13 @@ whether verification behaves differently on non-arithmetic errors;
 replicating the full design on a second model family to separate
 pipeline-level effects from model-level ones; tightening the solver prompt's
 plan adherence, so that plan-stage faults are not absorbed by silent
-re-derivation and the planning-stage estimate is sharpened; and evaluating
-learned inter-agent gating in the style of DebUnc~\citep{yoffe2024debunc}
-under our injection protocol, which would connect the measurement in this
-paper to the mitigation literature it motivates.
+re-derivation and the planning-stage estimate is sharpened; comparing a
+small verifier fine-tuned with QLoRA~\citep{dettmers2023qlora} on the
+released traces against the LLM judge, to test whether low-cost specialized
+oversight can match it; and evaluating learned inter-agent gating in the
+style of DebUnc~\citep{yoffe2024debunc} under our injection protocol, which
+would connect the measurement in this paper to the mitigation literature it
+motivates.
 
 \section{Evaluation}
 We assess the design against the standard threats to validity.
