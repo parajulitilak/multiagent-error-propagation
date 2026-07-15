@@ -1,10 +1,12 @@
 % =========================================================================
-% Do Errors Compound? Measuring Error Propagation in Multi-Agent LLM Pipelines
-% SISTER 2026 --- AI/ML Track (Dubai CS Society + Delta Rising Foundation)
+% Which Verifier Catches What? Mapping Error Severity to Verifier Strategy
+% in Multi-Agent LLM Pipelines
+% SISTER 2026, AI/ML Track (Dubai CS Society + Delta Rising Foundation)
 %
-% Self-contained: compiles on Overleaf as-is (pdfLaTeX). When moving to the
-% official NeurIPS template later, only the preamble changes; the body is
-% written to NeurIPS register already.
+% Self-contained: compiles on Overleaf as-is (pdfLaTeX). Structure follows
+% the SISTER research template: I Introduction, II Methods, III Results,
+% IV Analysis, V Conclusion, VI Improvements, VII Evaluation, References,
+% with author-year citations and a source link on every reference.
 %
 % Convention: \pending{...} marks every number or claim that must come from
 % our own runs. Nothing pending may survive into a submitted version.
@@ -16,24 +18,31 @@
 \usepackage{graphicx}
 \usepackage{microtype} % NOTE: if a local build errors on font expansion, use [expansion=false]
 \usepackage[hidelinks]{hyperref}
-\usepackage[numbers,sort&compress]{natbib}
+\usepackage{caption}
+\captionsetup{labelsep=period,font=small}
+\usepackage[round]{natbib}
 \usepackage{xcolor}
 \newcommand{\pending}[1]{\textcolor{purple}{[#1]}}
+\renewcommand{\thesection}{\Roman{section}}
 
-\title{\bf Do Errors Compound? Measuring Error Propagation\\in Multi-Agent LLM Pipelines}
+\title{\bf Which Verifier Catches What? Mapping Error Severity\\to Verifier Strategy in Multi-Agent LLM Pipelines}
 \author{Tilak Parajuli\\
-\small SISTER 2026, AI/ML Track --- Dubai Computer Science Society \& Delta Rising Foundation\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
 \small Kathmandu, Nepal
-\and \pending{Teammate Name(s)}\\
-\small \pending{affiliation}}
+\and Johnny Kozman\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
+\small Cairo, Egypt
+\and Arushi Waddepalli\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
+\small Hyderabad, India}
 \date{August 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Pipelines of specialized LLM agents---one agent plans, another executes, a
-third verifies---are now a default design for applied language-model systems.
+Pipelines of specialized LLM agents (one plans, another executes, a third
+verifies) are now a default design for applied language-model systems.
 The design carries an implicit promise: later stages should absorb the
 mistakes of earlier ones. Whether they actually do is unresolved. Failure
 taxonomies built from deployed systems describe \emph{what} goes wrong but,
@@ -41,15 +50,20 @@ being observational, cannot say how often an early error survives to the
 output or what a verification stage causally contributes. We address this
 with controlled fault injection, adapted from software reliability
 engineering: we corrupt a single intermediate output with a known, scripted
-perturbation and trace its fate through the rest of the pipeline. Across
-\pending{200} GSM8K problems \pending{and 150 HotpotQA questions}, we compare
-a single-agent baseline, a clean three-stage pipeline, early- and late-stage
-injection, and a verifier-removed ablation, analyzing outcomes with paired
-statistics throughout. Injected faults reached the final answer in
-\pending{XX\%} of cases; the verifier flagged \pending{YY\%} of faults but
-repaired only \pending{ZZ\%}, and faults planted at the planning stage
-survived \pending{significantly more often} than those planted during
-execution. We release code, prompts, and full traces.
+perturbation and trace its fate through the rest of the pipeline. Faults are
+graded into three severity levels, and the verification stage is additionally
+evaluated under three prompt strategies (direct, chain-of-thought, rubric)
+replayed on identical traces. Across \pending{200} GSM8K problems
+\pending{and 150 HotpotQA questions}, we compare a single-agent baseline, a
+clean three-stage pipeline, early- and late-stage injection, and
+verifier-removed ablations of both, analyzing outcomes with paired statistics
+throughout. Injected faults reached the final answer in \pending{XX\%} of
+cases; the verifier flagged \pending{YY\%} of faults but repaired only
+\pending{ZZ\%}, and faults planted at the planning stage survived
+\pending{significantly more often} than those planted during execution. The
+result is a map of which verifier strategy catches which error type at which
+severity \pending{(headline numbers pending)}. We release code, prompts, and
+full traces.
 \end{abstract}
 
 \section{Introduction}
@@ -82,68 +96,79 @@ What is missing is an interventional measurement. If we could plant a known
 error at a chosen stage and watch what the rest of the pipeline does with it,
 questions that the observational work leaves open would become directly
 answerable: How often does an early mistake reach the user? Does it matter
-where in the pipeline the mistake occurs? How much of the damage does a
-verifier actually prevent, as opposed to merely being present while the
-pipeline succeeds for other reasons?
+where in the pipeline the mistake occurs? Does it matter how blatant the
+mistake is? How much of the damage does a verifier actually prevent, as
+opposed to merely being present while the pipeline succeeds for other
+reasons?
 
 We make that measurement. Borrowing fault injection from software
 reliability engineering, we corrupt exactly one intermediate artifact of a
-Decomposer--Solver--Verifier pipeline---swapping a quantity or inverting an
-arithmetic operation---and let the remaining stages run untouched. Because
+Decomposer--Solver--Verifier pipeline (swapping a quantity or inverting an
+arithmetic operation) and let the remaining stages run untouched. Because
 the fault is planted by us, its origin is known by construction, and every
-downstream outcome can be attributed. On fixed problem samples from
-GSM8K~\citep{cobbe2021gsm8k} \pending{and HotpotQA~\citep{yang2018hotpotqa}},
-we evaluate five conditions: a single-agent baseline, the clean pipeline,
-injection at the planning stage, injection at the solving stage, and the
-injected pipeline with its verifier removed. All comparisons are paired, and
-we report exact tests and bootstrap intervals rather than point estimates
-alone.
+downstream outcome can be attributed. Each fault carries a pre-registered
+severity level, and because every stage output is stored, the verification
+stage can be re-evaluated under alternative prompt strategies on identical
+inputs. On fixed problem samples from GSM8K~\citep{cobbe2021gsm8k}
+\pending{and HotpotQA~\citep{yang2018hotpotqa}}, we evaluate six conditions:
+a single-agent baseline, the clean pipeline, injection at the planning stage,
+injection at the solving stage, and verifier-removed variants of both
+injected pipelines. All comparisons are paired, and we report exact tests and
+bootstrap intervals rather than point estimates alone.
+
+Our thesis is falsifiable: in a Decomposer--Solver--Verifier pipeline,
+planted faults survive to the final answer at rates that depend on where they
+are planted, how severe they are, and how the verifier is prompted, and the
+verification stage prevents only part of the resulting damage. The six
+pre-registered conditions below test each clause of that claim.
+
+This study sits at the intersection of four bodies of work.
+AutoGen~\citep{wu2023autogen}, MetaGPT~\citep{hong2023metagpt}, and
+CAMEL~\citep{li2023camel} established conversational and assembly-line
+patterns for composing LLM agents; the Decomposer--Solver--Verifier pipeline
+we study is the smallest configuration that exhibits the planning, execution,
+and review roles these frameworks popularized, and our contribution is not a
+new framework but a measurement of a failure property this family of systems
+shares. Second, the case that adding agents helps: debate improves factuality
+on several benchmarks~\citep{du2023debate}, majority voting over sampled
+agents scales favorably~\citep{li2024moreagents}, and self-consistency
+achieves related gains within a single model~\citep{wang2022selfconsistency}.
+These results measure aggregate accuracy; they do not distinguish a pipeline
+that prevents errors from one that merely commits different ones, which is
+precisely the distinction fault injection makes observable. Third,
+self-correction and verification: Reflexion~\citep{shinn2023reflexion} and
+Self-Refine~\citep{madaan2023selfrefine} show that models can revise their
+outputs given feedback, while \citet{huang2023selfcorrect} demonstrate that
+without external signals such revision often fails on reasoning tasks, and
+LLM-as-judge evaluation carries known biases~\citep{zheng2023judge}; our
+verifier ablation estimates, under identical inputs, how much a review stage
+changes the fate of a known error. Finally, failure analysis:
+MAST~\citep{cemri2025mast} provides the vocabulary (specification failures,
+inter-agent misalignment, verification failures) and we adopt it, but where
+MAST classifies failures that occurred in the wild, we induce failures under
+control; the two are complementary in the way epidemiology and randomized
+trials are. Mitigation systems are now being engineered against exactly this
+phenomenon: DebUnc attaches uncertainty metrics to inter-agent messages so
+that unreliable ones can be discounted~\citep{yoffe2024debunc}, and
+\citet{xie2026spark} model error cascades on the agent dependency graph and
+add a governance layer that suppresses them. Both presuppose that upstream
+errors propagate downstream. Our study measures that presupposition directly
+and quantifies how much protection a standard verifier stage already
+provides.
 
 \textbf{Contributions.} (i)~A controlled fault-injection methodology for
 measuring error propagation in LLM agent pipelines, with scripted,
-reproducible perturbation operators. (ii)~Quantitative propagation, catch,
-and correction rates, including the effect of injection position, under
-paired statistical tests. (iii)~A verifier ablation that isolates the causal
-contribution of the verification stage. \pending{(iv)~A 1.5B-parameter
-verifier fine-tuned with QLoRA~\citep{dettmers2023qlora} on our own traces,
-compared against an LLM judge on catch rate and cost.} (v)~Code, prompts,
-configuration, and complete traces, sufficient to regenerate every number in
-this paper from one script.
+reproducible perturbation operators graded by severity.
+(ii)~Quantitative propagation, catch, and correction rates, including the
+effects of injection position and fault severity, under paired statistical
+tests. (iii)~A verifier ablation that isolates the causal contribution of the
+verification stage. (iv)~A strategy-level map of verification: catch and
+correction rates for three verifier prompt strategies across error types and
+severities, obtained by replaying identical stored traces. (v)~Code,
+prompts, configuration, and complete traces, sufficient to regenerate every
+number in this paper from one script.
 
-\section{Related work}
-
-\textbf{Multi-agent frameworks.} AutoGen~\citep{wu2023autogen},
-MetaGPT~\citep{hong2023metagpt}, and CAMEL~\citep{li2023camel} established
-conversational and assembly-line patterns for composing LLM agents; the
-Decomposer--Solver--Verifier pipeline we study is the smallest configuration
-that exhibits the planning, execution, and review roles these frameworks
-popularized. Our contribution is not a new framework but a measurement of a
-failure property this family of systems shares.
-
-\textbf{Does adding agents help?} Multi-agent debate improves factuality on
-several benchmarks~\citep{du2023debate}, and majority voting over sampled
-agents scales favorably~\citep{li2024moreagents}; self-consistency achieves
-related gains within a single model~\citep{wang2022selfconsistency}. These
-results measure aggregate accuracy. They do not distinguish a pipeline that
-prevents errors from one that merely commits different ones, which is
-precisely the distinction fault injection makes observable.
-
-\textbf{Self-correction and verification.} Reflexion~\citep{shinn2023reflexion}
-and Self-Refine~\citep{madaan2023selfrefine} show that models can revise
-their outputs given feedback, while \citet{huang2023selfcorrect} demonstrate
-that without external signals such revision often fails on reasoning tasks.
-LLM-as-judge evaluation is standard but carries known
-biases~\citep{zheng2023judge}. Our verifier ablation speaks to this debate
-directly: it estimates, under identical inputs, how much a review stage
-changes the fate of a known error.
-
-\textbf{Failure analysis.} MAST~\citep{cemri2025mast} provides the
-vocabulary---specification failures, inter-agent misalignment, verification
-failures---and we adopt it. The difference is method: MAST classifies
-failures that occurred in the wild; we induce failures under control. The two
-are complementary in the way epidemiology and randomized trials are.
-
-\section{Method}
+\section{Methods}
 
 \subsection{Pipeline under study}
 Let $x$ be a problem. The pipeline computes a plan $d = D(x)$, a solution
@@ -157,18 +182,19 @@ baseline computes $\hat{y}$ from one call on $x$ alone.
 \begin{figure}[t]
 \centering
 % \includegraphics[width=.9\linewidth]{figures/fig1_pipeline.pdf}
-\caption{The Decomposer--Solver--Verifier pipeline with the two injection
-points marked. \pending{Figure to be rendered.}}
+\caption{The Decomposer--Solver--Verifier pipeline with the two
+injection points marked. \pending{Figure to be rendered.}}
 \label{fig:pipeline}
 \end{figure}
 
 \subsection{Controlled fault injection}
+\label{sec:injection}
 An injector $\phi$ maps an artifact to a corrupted artifact and a record of
 the change. We use two operators chosen to mimic the arithmetic slips that
 occur naturally in reasoning traces: \emph{number swap}, which replaces one
-quantity with a plausible wrong value (scaling by 0.4--1.7$\times$, or
-$\pm1$--$3$ for small integers), and \emph{operation flip}, which inverts one
-arithmetic operation word (\emph{add}$\leftrightarrow$\emph{subtract},
+quantity with a plausible wrong value drawn from a severity-dependent
+multiplier set, and \emph{operation flip}, which inverts one arithmetic
+operation word (\emph{add}$\leftrightarrow$\emph{subtract},
 \emph{multiply}$\leftrightarrow$\emph{divide}, and analogous pairs). List and
 step labels are excluded from number swap: corrupting ``Step 1'' changes no
 quantity, and admitting such perturbations would dilute the injected-fault
@@ -176,6 +202,14 @@ population with harmless cases and bias propagation rates downward. Every
 injection logs the operator, the original and replacement spans, and the
 character position, so each downstream error is attributable to a specific,
 inspectable change.
+
+Number swaps are graded into three pre-registered severity levels by the
+relative size of the change: \emph{mild} (under a 15\% change),
+\emph{moderate} (a 30--60\% change), and \emph{severe} (more than a 200\%
+change or a sign flip). Severity levels are balanced across the fixed sample
+and recorded with every injection, so propagation and detection can be
+stratified by how visible a fault is. \pending{The exact multiplier set per
+level is fixed in the released configuration before the main run.}
 
 In condition C1 the injector is applied to the plan $d$ before the solver
 sees it; in C2, to the solution $s$ before the verifier sees it. Exactly one
@@ -196,10 +230,25 @@ D1 & \checkmark & Decomposer  & --          \\
 D2 & \checkmark & Solver      & --          \\
 \bottomrule
 \end{tabular}
-\caption{Experimental conditions. Every condition runs on the same fixed
-problem sample (seeded), so all comparisons are paired at the problem level.}
+\caption{Experimental conditions. Every condition runs on the same
+fixed problem sample (seeded), so all comparisons are paired at the problem
+level.}
 \label{tab:conditions}
 \end{table}
+
+\subsection{Verifier prompt strategies}
+\label{sec:strategies}
+The verifier is the pipeline's final stage, and every run stores the exact
+problem, plan, and solution the verifier received. We exploit this to compare
+three verifier prompt strategies on identical inputs by replaying the frozen
+traces of conditions B, C1, and C2 rather than re-running the pipeline: V1,
+the direct verifier used in the main conditions (Appendix~A); V2, a
+chain-of-thought verifier instructed to re-derive the solution independently
+before judging; and V3, a rubric verifier that checks an explicit list of
+failure points. Because the upstream text is identical across strategies, any
+difference in catch or correction rate is attributable to the verifier prompt
+alone. \pending{V2 and V3 prompt texts to be finalized and released before
+the replay runs.}
 
 \subsection{Outcome measures}
 For a problem the clean pipeline solves correctly, an injected fault has one
@@ -211,30 +260,30 @@ the solver ignored the corrupted span). We report: accuracy per condition;
 \emph{propagation rate}, the fraction of valid injections whose final answer
 is wrong, restricted to problems condition B solved correctly so that new
 errors are attributable to the injection; \emph{catch rate} and
-\emph{correction rate} of the verifier; and cost per solved problem in
-tokens.
+\emph{correction rate} of the verifier, overall and stratified by error type,
+severity, and prompt strategy; and cost per solved problem in tokens.
 
 \subsection{Statistical analysis}
 All condition contrasts use McNemar's exact test on paired
 correct/incorrect outcomes~\citep{dietterich1998approximate}, the appropriate
 test when two systems answer the same items. Accuracies carry 95\%
 percentile-bootstrap intervals (10{,}000 resamples); rates carry Wilson
-score intervals. The effect of injection position and task type on fault
-survival is estimated by logistic regression, reported as odds ratios.
-Because several contrasts are tested, $p$-values are Holm--Bonferroni
-corrected~\citep{dror2018hitchhiker}. Main runs use temperature~0 on a fixed
-seeded sample; a robustness replication uses temperature~0.7 over three
-seeds, reported as mean and interval.
+score intervals. The effects of injection position, fault severity, and task
+type on fault survival are estimated by logistic regression, reported as
+odds ratios. Because several contrasts are tested, $p$-values are
+Holm--Bonferroni corrected~\citep{dror2018hitchhiker}. Main runs use
+temperature~0 on a fixed seeded sample; a robustness replication uses
+temperature~0.7 over three seeds, reported as mean and interval.
 
-\section{Experimental setup}
+\subsection{Setup and reproducibility}
 Model: \pending{exact model string}, accessed \pending{dates}, temperature 0
 (main), 0.7 (robustness). Datasets: GSM8K test split, $n=\pending{200}$
 problems sampled with seed 42 \pending{; HotpotQA distractor setting,
-$n=150$}. Injection seed 7; operators as in \S3.2. Prompts are fixed across
-conditions and listed verbatim in Appendix~A. Total API cost:
-\pending{\$XX}. All configuration is a single YAML file in the released
-repository; \texttt{python -m src.stats} regenerates every number below from
-the released traces.
+$n=150$}. Injection seed 7; operators and severity levels as in
+\S\ref{sec:injection}. Prompts are fixed across conditions and listed
+verbatim in Appendix~A. Total API cost: \pending{\$XX}. All configuration is
+a single YAML file in the released repository; \texttt{python -m src.stats}
+regenerates every number below from the released traces.
 
 \section{Results}
 \pending{This section is written after the runs. Planned presentation:}
@@ -248,55 +297,101 @@ caught-and-corrected / caught-not-corrected / silently-propagated /
 absorbed)}.
 
 \textbf{Does position matter?} \pending{Propagation rate by injection stage
-with odds ratio from the logistic model (H2).}
+with odds ratio from the logistic model (RQ3).}
 
-\textbf{What does the verifier buy?} \pending{C1 vs.\ D1 and C2 vs.\ D2:
+\textbf{Does severity matter?} \pending{Propagation, catch, and correction
+rates stratified by severity level, with odds ratios from the logistic model
+(RQ1).}
+
+\textbf{What does the verifier contribute?} \pending{C1 vs.\ D1 and C2 vs.\ D2:
 propagation with and without the verifier; the difference is the verifier's
 causal contribution.}
+
+\textbf{Which verifier catches what?} \pending{Catch and correction rates per
+prompt strategy (V1/V2/V3) by error type and severity; summary map in
+Table~\ref{tab:map} (RQ2, RQ3).}
 
 \begin{figure}[t]\centering
 \caption{Accuracy by condition with 95\% bootstrap intervals.
 \pending{pending}}\label{fig:acc}
 \end{figure}
 \begin{figure}[t]\centering
-\caption{Fate of injected faults by injection stage. \pending{pending}}
-\label{fig:fate}
+\caption{Fate of injected faults by injection stage.
+\pending{pending}}\label{fig:fate}
 \end{figure}
+\begin{table}[t]\centering
+\caption{Catch rate by verifier strategy, error type, and severity.
+\pending{pending}}\label{tab:map}
+\end{table}
 
 \section{Analysis}
 \pending{Three short case studies drawn from traces: one silent propagation
 (quote the corrupted span and the solver's uncritical use of it), one
 catch-and-correct, one absorption. Each at most a paragraph; the point is
-mechanism, not anecdote volume.}
-
-\section{Limitations}
-Our perturbations are synthetic by design; this is what makes origin
-attribution exact, but naturally arising errors are more varied, and our
-operators cover arithmetic slips rather than, e.g., factual hallucinations.
-Results are reported for \pending{one model family} and \pending{one to two}
-task distributions with objectively checkable answers; propagation dynamics
-on open-ended tasks may differ. The verifier prompt is representative rather
-than exhaustively tuned, so our estimate of verification benefit should be
-read as typical-configuration, not best-achievable. The study was designed
-and executed within a four-week program.
+mechanism, not anecdote volume. Then: what the severity gradient and the
+strategy map say about \emph{why} verifiers miss what they miss.}
 
 \section{Conclusion}
 \pending{One paragraph, written last: what the numbers established, one
 sentence on what changes for practitioners (where to spend verification
-budget), one sentence on next steps.}
+budget and which verifier strategy to choose), one sentence on next steps.}
 
 \paragraph{Broader impact.} Agent pipelines increasingly mediate consequential
-work. Measuring where errors survive---and how much verification actually
-helps---informs where guardrails belong; we do not foresee direct misuse
+work. Measuring where errors survive, and how much verification actually
+helps, informs where guardrails belong; we do not foresee direct misuse
 enabled by these measurements.
 
 \paragraph{Reproducibility.} Code, prompts, configuration, and full traces:
 \pending{repository URL}.
 
+\section{Improvements}
+Our perturbations are synthetic by design; this is what makes origin
+attribution exact, but naturally arising errors are more varied, and our
+operators cover arithmetic slips rather than, e.g., factual hallucinations.
+Results are reported for \pending{one model family} and \pending{one to two}
+task distributions with objectively checkable answers; propagation dynamics
+on open-ended tasks may differ. The verifier prompts are representative
+rather than exhaustively tuned, so our estimates of verification benefit
+should be read as typical-configuration, not best-achievable. The study was
+designed and executed within a four-week program.
+
+Several extensions would strengthen the study, in rough order of value:
+injecting semantic faults (contradictions, fabricated entities) to test
+whether verification behaves differently on non-arithmetic errors;
+replicating the full design on a second model family to separate
+pipeline-level effects from model-level ones; tightening the solver prompt's
+plan adherence, so that plan-stage faults are not absorbed by silent
+re-derivation and the planning-stage estimate is sharpened; comparing a
+small verifier fine-tuned with QLoRA~\citep{dettmers2023qlora} on the
+released traces against the LLM judge, to test whether low-cost specialized
+oversight can match it; and evaluating learned inter-agent gating in the
+style of DebUnc~\citep{yoffe2024debunc} under our injection protocol, which
+would connect the measurement in this paper to the mitigation literature it
+motivates.
+
+\section{Evaluation}
+We assess the design against the standard threats to validity.
+\emph{Internal validity}: all contrasts are paired on the same fixed,
+seeded problem sample; every injection is validated (a swap must change the
+value; labels are excluded) and its full record released, so any reader can
+audit the treatment. \emph{Construct validity}: propagation is measured only
+on problems the clean pipeline solves correctly, so a wrong final answer
+under injection is attributable to the fault rather than to baseline
+inability, and absorption is reported as its own fate rather than folded
+into success. \emph{Statistical validity}: exact paired tests, Wilson and
+bootstrap intervals, and Holm correction over the pre-registered contrast
+family~\citep{dror2018hitchhiker}. \emph{External validity}: results cover
+\pending{one to two} task distributions with objectively checkable answers
+and \pending{one model family}; a robustness replication at temperature 0.7
+across three seeds tests sensitivity to decoding randomness
+\pending{(robustness numbers pending)}. Conclusions are stated only where
+these checks agree.
+
 \bibliographystyle{plainnat}
 \bibliography{references}
 
 \appendix
+\renewcommand{\thesection}{\Alph{section}}
 \section{Role prompts}
 \textbf{Decomposer.} \emph{You are a planning agent. Break the problem into a
 short numbered plan of 2--5 concrete steps with any intermediate quantities
