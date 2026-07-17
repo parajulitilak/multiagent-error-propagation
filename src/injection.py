@@ -79,6 +79,9 @@ def _grade(old: float, new: float):
     candidate search; reported as 'off_band' only by the last-resort path).
     """
     sign_flip = (old > 0 > new) or (old < 0 < new)
+    # Relative change is undefined at old==0 (division by zero); any move off
+    # zero is an unbounded relative change, so it grades as severe rather than
+    # being dropped or crashing. rel is left None since no ratio is meaningful.
     if old == 0:
         return ("severe" if new != 0 else None), None, sign_flip
     rel = abs(new - old) / abs(old)
@@ -193,6 +196,14 @@ def make_injector(types: list[str], seed: int,
     application order, so the three levels stay balanced across the fixed,
     ordered problem sample; the counter advances only when a swap is
     actually applied.
+
+    Balance is guaranteed on the TARGET (severity_target in the meta), not on
+    the realized level: when a text cannot express the target band (e.g. a
+    small integer that cannot change by <15% for a mild target), number_swap
+    escalates and records the realized level in 'severity'. The meta keeps
+    both, so downstream analysis can stratify on either. Realized levels may
+    therefore be mildly imbalanced; the stats use Wilson intervals and a
+    logistic model, neither of which requires equal cell sizes.
     """
     base_rng = random.Random(seed)
     applied_swaps = 0
