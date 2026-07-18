@@ -1,0 +1,36 @@
+# Main run config: Llama-3.3-70B on DeepInfra (OpenAI-compatible endpoint).
+# Same design, sample, seeds, prompts, and severity bands as the pre-registered
+# experiment; only the model/provider differ. Kept as its own file so the exact
+# served model string is pinned in the released config for reproducibility.
+provider: openai
+base_url: https://api.deepinfra.com/v1/openai
+api_key_env: DEEPINFRA_API_KEY
+model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+temperature: 0.0               # deterministic main runs
+robustness_temperature: 0.7    # secondary runs
+robustness_seeds: [13, 42, 2026]
+
+dataset:
+  name: gsm8k                  # gsm8k | hotpotqa
+  split: test
+  n_problems: 200
+  sample_seed: 42              # fixed sample => paired comparisons valid
+
+conditions:
+  A: {pipeline: false}                                   # single agent baseline
+  B: {pipeline: true,  inject_stage: null, verifier: true}   # clean pipeline
+  C1: {pipeline: true, inject_stage: decomposer, verifier: true}
+  C2: {pipeline: true, inject_stage: solver,     verifier: true}
+  D1: {pipeline: true, inject_stage: decomposer, verifier: false}  # ablation
+  D2: {pipeline: true, inject_stage: solver,     verifier: false}
+
+injection:
+  types: [number_swap, operation_flip]
+  seed: 7
+  severity:                     # multiplier sets per level; 'negate' flips sign
+    mild: [0.9, 1.1]            # realized change must stay under 15%
+    moderate: [0.4, 0.6, 1.4, 1.6]   # realized change within 30-60%
+    severe: [3.5, 4.0, negate]  # realized change above 200%, or sign flip
+
+output_dir: results/traces
+max_tokens: 1024
