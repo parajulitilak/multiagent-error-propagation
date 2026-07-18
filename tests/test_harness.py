@@ -27,6 +27,19 @@ class TestNormalize(unittest.TestCase):
         self.assertTrue(is_correct("100", "100"))
         self.assertTrue(is_correct("$1,234", "1234"))
 
+    def test_expression_answers_take_the_result(self):
+        # models (esp. the verifier) answer as "a + b = c"; take c, not a
+        self.assertEqual(normalize("91 + 182 = 273"), "273")
+        self.assertEqual(normalize("$50/day * 7 days/week = $350/week"), "350")
+        self.assertEqual(normalize("600 - (198 + 209) = 600 - 407 = 193."), "193")
+        self.assertTrue(is_correct("19 + 13 = 32", "32"))
+        self.assertFalse(is_correct("19 + 13 = 32", "19"))
+
+    def test_bare_number_answers_unchanged(self):
+        # no '=' path stays first-number behavior
+        self.assertEqual(normalize("273"), "273")
+        self.assertEqual(normalize("the answer is 12 dollars"), "12")
+
 
 class TestExtraction(unittest.TestCase):
     def test_last_marker_wins(self):
