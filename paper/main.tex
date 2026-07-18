@@ -17,10 +17,10 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{microtype} % NOTE: if a local build errors on font expansion, use [expansion=false]
-\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true, citecolor=blue, urlcolor=blue, linkcolor=blue]{hyperref}
 \usepackage{caption}
 \captionsetup{labelsep=period,font=small}
-\usepackage[round]{natbib}
+\usepackage[numbers,square,sort&compress]{natbib}
 \usepackage{xcolor}
 \newcommand{\pending}[1]{\textcolor{purple}{[#1]}}
 \renewcommand{\thesection}{\Roman{section}}
@@ -69,12 +69,11 @@ full traces.
 \section{Introduction}
 
 The unit of deployment for language models is shifting from a single model
-call to a pipeline of agents. A planning agent decomposes the task, a solving
-agent executes the plan, and a verification agent checks the result before it
-leaves the system; frameworks such as AutoGen~\citep{wu2023autogen} and
+call to a pipeline of agents. A decomposer agent plans the task, a solving
+agent executes the plan, and a verification agent checks the result against the ground truth; frameworks such as AutoGen~\citep{wu2023autogen} and
 MetaGPT~\citep{hong2023metagpt} have made this pattern easy to build and
-correspondingly common. The pattern borrows its justification from human
-organizations: specialization should raise quality, and review should catch
+correspondingly common. The pattern borrows its justification from real-time human
+organizations: specialization should raise accuracy, and review should catch
 what specialization misses.
 
 The evidence for that justification is mixed. On one side, multi-agent debate
@@ -84,13 +83,9 @@ grows~\citep{li2024moreagents}. On the other, a growing body of work finds
 that language models are poor judges of their own reasoning: without external
 feedback, self-correction often leaves accuracy unchanged or makes it
 worse~\citep{huang2023selfcorrect}. Between these positions sits the most
-detailed account of multi-agent behavior to date, the MAST
-taxonomy~\citep{cemri2025mast}, which catalogues fourteen failure modes
+detailed account of multi-agent behavior to date, the Multi-Agent System Failure Taxonomy (MAST) ~\citep{cemri2025mast}, which catalogues fourteen failure modes
 observed across seven deployed frameworks. MAST establishes that inter-agent
-failures are frequent and varied. But it is an observational study: when a
-deployed system fails, the origin of the failure must be reconstructed after
-the fact, and how often a given early-stage error would have survived to the
-output is not identifiable from logs alone.
+failures are frequent and varied. But it is an observational study: when a deployed system fails, the logs show the outcome but not necessarily where the error began. Researchers must reconstruct the failure afterward, and logs alone cannot reveal how often an early-stage mistake would have persisted to the final output.
 
 What is missing is an interventional measurement. If we could plant a known
 error at a chosen stage and watch what the rest of the pipeline does with it,
@@ -107,11 +102,10 @@ Decomposer--Solver--Verifier pipeline (swapping a quantity or inverting an
 arithmetic operation) and let the remaining stages run untouched. Because
 the fault is planted by us, its origin is known by construction, and every
 downstream outcome can be attributed. Each fault carries a pre-registered
-severity level, and because every stage output is stored, the verification
+severity level, and because every stage's output is stored, the verification
 stage can be re-evaluated under alternative prompt strategies on identical
-inputs. On fixed problem samples from GSM8K~\citep{cobbe2021gsm8k}
-\pending{and HotpotQA~\citep{yang2018hotpotqa}}, we evaluate six conditions:
-a single-agent baseline, the clean pipeline, injection at the planning stage,
+inputs. On fixed problem samples from GSM8K~\citep{cobbe2021gsm8k} and HotpotQA~\citep{yang2018hotpotqa}, we evaluate six conditions:
+a single-agent baseline, the clean Decomposer--Solver--Verifier pipeline, injection at the planning stage,
 injection at the solving stage, and verifier-removed variants of both
 injected pipelines. All comparisons are paired, and we report exact tests and
 bootstrap intervals rather than point estimates alone.
@@ -128,7 +122,7 @@ CAMEL~\citep{li2023camel} established conversational and assembly-line
 patterns for composing LLM agents; the Decomposer--Solver--Verifier pipeline
 we study is the smallest configuration that exhibits the planning, execution,
 and review roles these frameworks popularized, and our contribution is not a
-new framework but a measurement of a failure property this family of systems
+new framework but the measurement of a failure property this family of systems
 shares. Second, the case that adding agents helps: debate improves factuality
 on several benchmarks~\citep{du2023debate}, majority voting over sampled
 agents scales favorably~\citep{li2024moreagents}, and self-consistency
@@ -138,33 +132,43 @@ that prevents errors from one that merely commits different ones, which is
 precisely the distinction fault injection makes observable. Third,
 self-correction and verification: Reflexion~\citep{shinn2023reflexion} and
 Self-Refine~\citep{madaan2023selfrefine} show that models can revise their
-outputs given feedback, while \citet{huang2023selfcorrect} demonstrate that
+outputs given feedback, while \citep{huang2023selfcorrect} demonstrate that
 without external signals such revision often fails on reasoning tasks, and
 LLM-as-judge evaluation carries known biases~\citep{zheng2023judge}; our
 verifier ablation estimates, under identical inputs, how much a review stage
-changes the fate of a known error. Finally, failure analysis:
+changes the fate of a known error. 
+
+Finally, failure analysis:
 MAST~\citep{cemri2025mast} provides the vocabulary (specification failures,
 inter-agent misalignment, verification failures) and we adopt it, but where
 MAST classifies failures that occurred in the wild, we induce failures under
 control; the two are complementary in the way epidemiology and randomized
 trials are. Mitigation systems are now being engineered against exactly this
-phenomenon: DebUnc attaches uncertainty metrics to inter-agent messages so
-that unreliable ones can be discounted~\citep{yoffe2024debunc}, and
-\citet{xie2026spark} model error cascades on the agent dependency graph and
+phenomenon: DebUnc~\citep{yoffe2024debunc} attaches uncertainty metrics to inter-agent messages so
+that unreliable ones can be discounted, and ~\citep{xie2026spark} model error cascades on the agent dependency graph and
 add a governance layer that suppresses them. Both presuppose that upstream
 errors propagate downstream. Our study measures that presupposition directly
 and quantifies how much protection a standard verifier stage already
 provides.
 
-\textbf{Contributions.} (i)~A controlled fault-injection methodology for
+\textbf{Contributions.} 
+
+(i)~A controlled fault-injection methodology for
 measuring error propagation in LLM agent pipelines, with scripted,
 reproducible perturbation operators graded by severity.
+
 (ii)~Quantitative propagation, catch, and correction rates, including the
 effects of injection position and fault severity, under paired statistical
-tests. (iii)~A verifier ablation that isolates the causal contribution of the
-verification stage. (iv)~A strategy-level map of verification: catch and
+tests. 
+
+(iii)~A verifier ablation that isolates the causal contribution of the
+verification stage. 
+
+(iv)~A strategy-level map of verification: catch and
 correction rates for three verifier prompt strategies across error types and
-severities, obtained by replaying identical stored traces. (v)~Code,
+severities, obtained by replaying identical stored traces. 
+
+(v)~Code,
 prompts, configuration, and complete traces, sufficient to regenerate every
 number in this paper from one script.
 
@@ -181,9 +185,9 @@ baseline computes $\hat{y}$ from one call on $x$ alone.
 
 \begin{figure}[t]
 \centering
-% \includegraphics[width=.9\linewidth]{figures/fig1_pipeline.pdf}
+\includegraphics[width=.95\linewidth]{Fig1.png}
 \caption{The Decomposer--Solver--Verifier pipeline with the two
-injection points marked. \pending{Figure to be rendered.}}
+injection points marked. }
 \label{fig:pipeline}
 \end{figure}
 
