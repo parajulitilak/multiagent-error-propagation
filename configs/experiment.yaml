@@ -6,7 +6,7 @@ robustness_temperature: 0.7    # secondary runs
 robustness_seeds: [13, 42, 2026]
 
 dataset:
-  name: gsm8k                  # gsm8k | gsm-hard | hotpotqa
+  name: gsm-hard                  # gsm8k | gsm-hard | hotpotqa
   split: test
   n_problems: 200
   sample_seed: 42              # fixed sample => paired comparisons valid
