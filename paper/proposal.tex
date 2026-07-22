@@ -28,7 +28,7 @@
    \And
   Arushi Waddepalli\\
   SISTER 2026, AI/ML Track\\
-  Dubai Computer Science Society & Delta Rising Foundation\\
+  Dubai Computer Science Society \& Delta Rising Foundation\\
   Hyderabad, India\\
   \texttt{arushiwaddepalli09@gmail.com}
 }
@@ -39,25 +39,28 @@
 
 \paragraph{Area.} Research: multi-agent LLM reliability and error propagation. Method: controlled fault injection across severity levels and verifier prompt strategies (direct, CoT, rubric).
 
- 
+
 \begin{abstract}
 Multi-agent LLM pipelines (plan, solve, verify) are rapidly being deployed,
 yet how errors travel through them is not quantitatively understood. Existing
-work taxonomizes failures observed in the wild (Cemri et al., 2025) but does
+work taxonomizes failures observed in the wild \citep{cemri2025mast} but does
 not measure propagation causally. We adapt fault injection, a standard method
 from software reliability engineering, to LLM pipelines: we corrupt one
 intermediate output with a known, scripted perturbation (a number swap or an
-operation flip) and measure whether the fault is caught, corrected, or
-silently propagated to the final answer. On a fixed sample of roughly 200
-GSM8K problems, extending to HotpotQA, we compare five conditions: a
-single-agent baseline, a clean three-agent pipeline, early- and late-stage
-injection, and a verifier-removed ablation. Outcomes are analyzed with paired
-statistics: McNemar's exact test, bootstrap confidence intervals, Wilson
-intervals, and logistic regression on fault survival. As an extension, we
-fine-tune a small (1.5B) QLoRA verifier on our own labeled traces and compare
-it with an LLM judge on catch rate and cost. The study is fully executable in
-four weeks on API access plus a free Colab GPU; all code, prompts, and traces
-will be released publicly.
+operation flip), graded into three severity levels (mild, moderate, severe),
+and measure whether the fault is caught, corrected, or silently propagated to
+the final answer. On a fixed sample of roughly 200 GSM8K problems, extending
+to HotpotQA, we compare six conditions: a single-agent baseline, a clean
+three-agent pipeline, early- and late-stage injection, and verifier-removed
+ablations of both. Because every stage output is stored, we additionally
+replay the verification stage over identical traces under three prompt
+strategies (direct, chain-of-thought, rubric checklist), so that differences
+in catch rate are attributable to the strategy alone; the result is a map of
+which verifier strategy catches which error type at which severity. Outcomes
+are analyzed with paired statistics: McNemar's exact test, bootstrap
+confidence intervals, Wilson intervals, and logistic regression on fault
+survival. The study is fully executable in four weeks on API access; all
+code, prompts, and traces will be released publicly.
 \end{abstract}
 
 \section{Introduction}
@@ -67,23 +70,37 @@ but a pipeline of specialized agents: one decomposes the task, another
 executes it, a third verifies the result. The implicit promise of this design
 is robustness; later stages are expected to absorb the mistakes of earlier
 ones. The literature is split on whether that promise holds. Multi-agent
-debate has been reported to improve factuality (Du et al., 2023), while
+debate has been reported to improve factuality \citep{du2023debate}, while
 self-correction studies find that models largely cannot identify their own
-reasoning errors without external feedback (Huang et al., 2023). The most
-closely related work, the MAST taxonomy (Cemri et al., 2025), catalogues
-fourteen failure modes observed across seven deployed multi-agent frameworks.
-As an observational study, however, it cannot say how often an early-stage
-error survives to the output, nor what a verification stage causally
-contributes.
+reasoning errors without external feedback \citep{huang2023selfcorrect}. The
+most closely related work, the MAST taxonomy \citep{cemri2025mast},
+catalogues fourteen failure modes observed across seven deployed multi-agent
+frameworks. As an observational study, however, it cannot say how often an
+early-stage error survives to the output, nor what a verification stage
+causally contributes. Meanwhile, mitigation layers that gate or govern
+inter-agent messages are already being engineered on the assumption that such
+errors cascade \citep{yoffe2024debunc, xie2026spark}; measuring that
+assumption is the missing step.
 
 We close that gap experimentally. Because each fault is planted by us, ground
 truth about the origin of every downstream failure is known by construction,
 turning ``agents sometimes fail'' into a measurable, attributable quantity.
-We ask four questions. (H1)~Do injected faults survive to the final answer
-more often than chance? (H2)~Do earlier faults survive more often than later
-ones? (H3)~How much propagation does the verifier actually prevent? (H4)~Can
-a small fine-tuned verifier match a large LLM judge at a fraction of the
-cost?
+This study aims to answer three specific research questions:
+\begin{itemize}
+    \item \textbf{RQ1 (Propagation and Severity):} How often do injected
+    faults survive to the final answer, and how does error severity
+    (mild/moderate/severe) change the survival rate? Do verifiers only
+    catch fatal errors, or are they sensitive to subtle slips?
+    \item \textbf{RQ2 (Verifier Strategy):} How does verifier prompt
+    strategy (direct vs chain-of-thought vs rubric) affect catch and
+    correction rates across different error types and severities?
+    \item \textbf{RQ3 (The Map):} How do injection stage (Decomposer vs
+    Solver) and the presence of a verifier (ablation) interact with error
+    type, severity, and verifier strategy to determine catch rates? A full
+    map is produced identifying which verifier catches which error, where
+    it was injected, how severe it was, and isolating the causal
+    contribution of the verification stage.
+\end{itemize}
 
 The design meets the program's stated criteria directly: public data with
 defined ground truth (GSM8K, HotpotQA); a simple baseline (single agent);
@@ -91,5 +108,8 @@ metrics fixed before experimentation (accuracy, propagation rate, catch and
 correction rate, cost per solved problem); a scope achievable in two to four
 weeks; novelty in the evaluation method rather than a demo; and evidence that
 includes error analysis and stated limitations.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}
