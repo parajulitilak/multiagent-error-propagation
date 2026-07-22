@@ -181,11 +181,60 @@ def operation_flip(text: str, rng: random.Random):
     return corrupted, meta
 
 
-INJECTORS = {"number_swap": number_swap, "operation_flip": operation_flip}
+def semantic_logic_error(text: str, rng: random.Random, cfg: dict | None = None):
+    """Rewrite a plan or solution to introduce a single logical reasoning flaw using an LLM.
+
+    If cfg is not provided or API key is missing, falls back to a dummy corruption.
+    """
+    if not cfg:
+        return text + "\n[FALLBACK LOGIC ERROR: Step 3 was skipped.]", {
+            "type": "semantic_logic_error", "applied": True, "method": "fallback"
+        }
+
+    from src.pipeline import call_llm
+
+    system_prompt = (
+        "You are a fault injection agent. Read the provided mathematical reasoning text (a plan or solution).\n"
+        "Rewrite the text to introduce exactly ONE subtle logical reasoning error (e.g., skip a key dependency, "
+        "reverse the order of steps, or make an incorrect logical deduction).\n"
+        "The rewritten text must remain grammatically correct, retain the same math terms, and look like a plausible human reasoning slip, but the logic must be fundamentally flawed.\n"
+        "Output ONLY the final corrupted text, with absolutely no preamble, explanation, or markdown formatting."
+    )
+
+    user_prompt = f"TEXT TO CORRUPT:\n{text}"
+
+    try:
+        corrupted_text, usage = call_llm(system_prompt, user_prompt, cfg)
+        corrupted_text = corrupted_text.strip()
+        meta = {
+            "type": "semantic_logic_error",
+            "applied": True,
+            "old": text,
+            "new": corrupted_text,
+            "usage": usage,
+            "method": "llm"
+        }
+        return corrupted_text, meta
+    except Exception as e:
+        fallback_text = text + "\n[FALLBACK LOGIC ERROR: Step 3 was skipped.]"
+        return fallback_text, {
+            "type": "semantic_logic_error",
+            "applied": True,
+            "method": "fallback_error",
+            "error": str(e)
+        }
+
+
+INJECTORS = {
+    "number_swap": number_swap,
+    "operation_flip": operation_flip,
+    "semantic_logic_error": semantic_logic_error
+}
 
 
 def make_injector(types: list[str], seed: int,
-                  severity_multipliers: dict | None = None):
+                  severity_multipliers: dict | None = None,
+                  cfg: dict | None = None):
     """Return injector fn cycling over requested types; falls back if one
     perturbation type finds nothing to corrupt in a given text.
 
@@ -208,6 +257,10 @@ def make_injector(types: list[str], seed: int,
                 corrupted, meta = number_swap(text, r, target, severity_multipliers)
                 if meta.get("applied"):
                     applied_swaps += 1
+                    return corrupted, meta
+            elif t == "semantic_logic_error":
+                corrupted, meta = semantic_logic_error(text, r, cfg)
+                if meta.get("applied"):
                     return corrupted, meta
             else:
                 corrupted, meta = INJECTORS[t](text, r)
