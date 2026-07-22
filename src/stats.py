@@ -93,13 +93,24 @@ def error_fate(injected: dict, clean: dict):
     has_verifier = any(t.get("verifier_output") for t in injected.values())
     fates = Counter()
     type_counts = Counter()
+    severity_counts = Counter()
+    severity_propagated = Counter()
     ids = [i for i in injected
            if injected[i].get("injection_meta", {}) and
               injected[i]["injection_meta"].get("applied") and
               i in clean and clean[i]["extra"]["correct"]]
     for i in ids:
         t = injected[i]
-        type_counts[t["injection_meta"].get("type", "unknown")] += 1
+        meta = t.get("injection_meta") or {}
+        type_counts[meta.get("type", "unknown")] += 1
+        
+        # Track severity outcomes for number swaps
+        if meta.get("type") == "number_swap" and "severity" in meta:
+            sev = meta["severity"]
+            severity_counts[sev] += 1
+            if not t["extra"]["correct"]:
+                severity_propagated[sev] += 1
+                
         correct = t["extra"]["correct"]
         if not has_verifier:
             fates["propagated" if not correct else "absorbed"] += 1
@@ -122,10 +133,20 @@ def error_fate(injected: dict, clean: dict):
     
     type_freq = {k: f"{v}/{total} ({v/total*100:.1f}%)" for k, v in type_counts.items()}
     
+    severity_rates = {}
+    for sev in ["mild", "moderate", "severe"]:
+        total_sev = severity_counts[sev]
+        if total_sev > 0:
+            prop_sev = severity_propagated[sev]
+            severity_rates[sev] = f"{prop_sev}/{total_sev} ({prop_sev/total_sev*100:.1f}%)"
+            
     out = {"n_valid_injections": total, **fates,
            "propagation_rate": prop / total if total else None,
            "propagation_wilson95": (round(lo, 3), round(hi, 3)),
            "injection_types": type_freq}
+    if severity_rates:
+        out["severity_propagation"] = severity_rates
+        
     if has_verifier:
         caught = fates["caught_and_corrected"] + fates["caught_not_corrected"]
         clo, chi = wilson(caught, total) if total else (0, 0)
