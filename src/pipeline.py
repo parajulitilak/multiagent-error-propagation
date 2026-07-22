@@ -33,9 +33,13 @@ def call_llm(system: str, user: str, cfg: dict) -> tuple[str, dict]:
                 usage = {"input_tokens": resp.usage.input_tokens,
                          "output_tokens": resp.usage.output_tokens}
                 return resp.content[0].text, usage
-            else:  # openai
+            else:  # openai-compatible (OpenAI, DeepInfra, ...)
+                import os
                 from openai import OpenAI
-                client = OpenAI()  # key from OPENAI_API_KEY
+                client = OpenAI(
+                    base_url=cfg.get("base_url"),  # None: api.openai.com
+                    api_key=os.environ[cfg.get("api_key_env", "OPENAI_API_KEY")].strip(),
+                )
                 resp = client.chat.completions.create(
                     model=cfg["model"],
                     max_tokens=cfg.get("max_tokens", 1024),
