@@ -92,12 +92,14 @@ def error_fate(injected: dict, clean: dict):
     """
     has_verifier = any(t.get("verifier_output") for t in injected.values())
     fates = Counter()
+    type_counts = Counter()
     ids = [i for i in injected
            if injected[i].get("injection_meta", {}) and
               injected[i]["injection_meta"].get("applied") and
               i in clean and clean[i]["extra"]["correct"]]
     for i in ids:
         t = injected[i]
+        type_counts[t["injection_meta"].get("type", "unknown")] += 1
         correct = t["extra"]["correct"]
         if not has_verifier:
             fates["propagated" if not correct else "absorbed"] += 1
@@ -117,9 +119,13 @@ def error_fate(injected: dict, clean: dict):
     else:
         prop = fates["propagated"]
     lo, hi = wilson(prop, total) if total else (0, 0)
+    
+    type_freq = {k: f"{v}/{total} ({v/total*100:.1f}%)" for k, v in type_counts.items()}
+    
     out = {"n_valid_injections": total, **fates,
            "propagation_rate": prop / total if total else None,
-           "propagation_wilson95": (round(lo, 3), round(hi, 3))}
+           "propagation_wilson95": (round(lo, 3), round(hi, 3)),
+           "injection_types": type_freq}
     if has_verifier:
         caught = fates["caught_and_corrected"] + fates["caught_not_corrected"]
         clo, chi = wilson(caught, total) if total else (0, 0)
@@ -157,7 +163,8 @@ def survival_logit(data: dict):
                 continue
             rows.append((0 if t["extra"]["correct"] else 1,
                          early,
-                         1 if meta.get("type") == "operation_flip" else 0))
+                         1 if meta.get("type") == "operation_flip" else 0,
+                         1 if meta.get("type") == "semantic_logic_error" else 0))
     if len(rows) < 20:
         print(f"  skipped: only {len(rows)} usable injections")
         return
@@ -168,7 +175,7 @@ def survival_logit(data: dict):
     except Exception as e:
         print(f"  logit failed ({e}); report raw rates instead")
         return
-    names = ["intercept", "early_stage", "operation_flip"]
+    names = ["intercept", "early_stage", "operation_flip", "semantic_logic_error"]
     ors = np.exp(fit.params)
     cis = np.exp(fit.conf_int())
     for name, o, (lo, hi), p in zip(names, ors, cis, fit.pvalues):
