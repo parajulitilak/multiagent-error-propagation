@@ -27,6 +27,10 @@ conditions:
 injection:
   types: [number_swap, operation_flip]
   seed: 7
+  severity:                     # multiplier sets per level; 'negate' flips sign
+    mild: [0.9, 1.1]            # realized change must stay under 15%
+    moderate: [0.4, 0.6, 1.4, 1.6]   # realized change within 30-60%
+    severe: [3.5, 4.0, negate]  # realized change above 200%, or sign flip
 
 output_dir: results/traces_replication_llama33
 max_tokens: 1024
