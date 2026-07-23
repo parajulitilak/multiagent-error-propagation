@@ -69,11 +69,32 @@ SOLVER_SYS = (
     "You are a solving agent. Execute the given plan step by step on the problem. "
     "Show brief working, then end with the line: FINAL ANSWER: <answer>."
 )
-VERIFIER_SYS = (
+VERIFIER_SYS_DIRECT = (
     "You are a verification agent. Check the proposed solution against the "
     "original problem. If correct, reply 'VERDICT: ACCEPT'. If you find an error, "
     "reply 'VERDICT: REJECT', explain the error in one sentence, and give a "
     "corrected line: FINAL ANSWER: <answer>."
+)
+VERIFIER_SYS_COT = (
+    "You are a verification agent. Check the proposed solution against the original problem.\n"
+    "First, write down your step-by-step verification reasoning (thinking out loud).\n"
+    "Then, end your response with:\n"
+    "VERDICT: ACCEPT (if the solution is correct)\n"
+    "OR\n"
+    "VERDICT: REJECT\n"
+    "If you reject, explain the error in one sentence, and give a corrected line: FINAL ANSWER: <answer>."
+)
+VERIFIER_SYS_RUBRIC = (
+    "You are a verification agent. Evaluate the proposed solution by systematically verifying these three items:\n"
+    "1. Variables: Are the numbers used from the question identical to the original problem?\n"
+    "2. Operations: Are the mathematical operations chosen (add/sub/mult/div) logically correct?\n"
+    "3. Calculations: Are the calculations mathematically correct?\n\n"
+    "Write down your evaluation for each of the 3 points above.\n"
+    "Then, end your response with:\n"
+    "VERDICT: ACCEPT (if all checks pass)\n"
+    "OR\n"
+    "VERDICT: REJECT (if any check fails)\n"
+    "If you reject, explain the error in one sentence, and provide a corrected line: FINAL ANSWER: <answer>."
 )
 SINGLE_SYS = (
     "Solve the problem step by step. End with the line: FINAL ANSWER: <answer>."
@@ -131,7 +152,15 @@ def run_pipeline(
     # Stage 3: Verifier (ablatable)
     if use_verifier:
         v_input = f"PROBLEM:\n{question}\n\nPROPOSED SOLUTION:\n{solution_used}"
-        t.verifier_output, t.usage["verifier"] = call_llm(VERIFIER_SYS, v_input, cfg)
+        strategy = cfg.get("verifier_strategy", "direct")
+        if strategy == "cot":
+            v_sys = VERIFIER_SYS_COT
+        elif strategy == "rubric":
+            v_sys = VERIFIER_SYS_RUBRIC
+        else:
+            v_sys = VERIFIER_SYS_DIRECT
+            
+        t.verifier_output, t.usage["verifier"] = call_llm(v_sys, v_input, cfg)
         t.verifier_verdict = (
             "REJECT" if "VERDICT: REJECT" in t.verifier_output.upper() else
             "ACCEPT" if "VERDICT: ACCEPT" in t.verifier_output.upper() else None
