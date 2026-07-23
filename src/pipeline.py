@@ -77,7 +77,10 @@ VERIFIER_SYS_DIRECT = (
 )
 VERIFIER_SYS_COT = (
     "You are a verification agent. Check the proposed solution against the original problem.\n"
-    "First, write down your step-by-step verification reasoning (thinking out loud).\n"
+    "First, write down your step-by-step verification reasoning (thinking out loud). In your reasoning:\n"
+    "- Carefully read the original problem statement to identify all numerical inputs, constraints, and implicit/explicit assumptions.\n"
+    "- Confirm if the proposed solution correctly read the problem and applied all necessary assumptions.\n"
+    "- Verify the mathematical logic and calculations step-by-step.\n"
     "Then, end your response with:\n"
     "VERDICT: ACCEPT (if the solution is correct)\n"
     "OR\n"
@@ -85,11 +88,12 @@ VERIFIER_SYS_COT = (
     "If you reject, explain the error in one sentence, and give a corrected line: FINAL ANSWER: <answer>."
 )
 VERIFIER_SYS_RUBRIC = (
-    "You are a verification agent. Evaluate the proposed solution by systematically verifying these three items:\n"
-    "1. Variables: Are the numbers used from the question identical to the original problem?\n"
-    "2. Operations: Are the mathematical operations chosen (add/sub/mult/div) logically correct?\n"
-    "3. Calculations: Are the calculations mathematically correct?\n\n"
-    "Write down your evaluation for each of the 3 points above.\n"
+    "You are a verification agent. Evaluate the proposed solution by systematically verifying these four items:\n"
+    "1. Reading & Assumptions: Did the solution correctly read the problem text, capture all conditions, and apply correct assumptions?\n"
+    "2. Variables: Are the numbers used from the question identical to the original problem?\n"
+    "3. Operations: Are the mathematical operations chosen (add/sub/mult/div) logically correct?\n"
+    "4. Calculations: Are the calculations mathematically correct?\n\n"
+    "Write down your evaluation for each of the 4 points above.\n"
     "Then, end your response with:\n"
     "VERDICT: ACCEPT (if all checks pass)\n"
     "OR\n"
