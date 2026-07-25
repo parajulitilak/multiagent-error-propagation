@@ -26,20 +26,12 @@ from collections import Counter
 
 from scipy import stats as sps
 
-from src.runner import normalize
-
 
 def load(traces_dir: pathlib.Path, cond: str) -> dict[str, dict]:
     path = traces_dir / f"{cond}.jsonl"
     out = {}
     for line in open(path):
         t = json.loads(line)
-        # Re-score correctness from the raw fields with the canonical scorer,
-        # so analysis reflects the current normalize() rather than the flag
-        # that happened to be baked in at run time.
-        t.setdefault("extra", {})["correct"] = (
-            normalize(t.get("final_answer")) == normalize(t.get("gold"))
-        )
         out[t["problem_id"]] = t
     return out
 

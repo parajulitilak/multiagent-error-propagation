@@ -56,12 +56,6 @@ def load_gsm_hard(n: int, seed: int):
 
 def normalize(ans: str) -> str:
     ans = (ans or "").strip().replace(",", "").replace("$", "")
-    # An answer written as an expression ("91 + 182 = 273") states its value
-    # as the result of the final computation: the number after the last '='.
-    # Models, and the verifier in particular, answer this way; take the
-    # result, otherwise fall back to the first number in the text.
-    if "=" in ans:
-        ans = ans.split("=")[-1]
     m = re.search(r"-?\d+(?:\.\d+)?", ans)
     if not m:
         return ans.lower()
