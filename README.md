@@ -27,16 +27,16 @@ This repository implements a controlled fault-injection methodology adapted from
 
 ## 🔬 Experimental Design Matrix
 
-| Condition | Description | Inject Stage | Verifier |
-| :--- | :--- | :---: | :---: |
-| **A** | Single-agent end-to-end baseline | N/A | OFF |
-| **B** | Clean 3-agent pipeline (Decomposer → Solver → Verifier) | None | ON |
-| **C1** | Pipeline + fault injected at Decomposer (Plan stage) | Decomposer ($C_1$) | ON |
-| **C2** | Pipeline + fault injected at Solver (Execution stage) | Solver ($C_2$) | ON |
-| **D1** | Decomposer injection with Verifier ablated | Decomposer ($D_1$) | OFF |
-| **D2** | Solver injection with Verifier ablated | Solver ($D_2$) | OFF |
+| Condition | Pipeline Architecture | Injected Fault Target | Verifier Status | Primary Research Objective |
+| :--- | :--- | :---: | :---: | :--- |
+| **A** | Single Agent (End-to-End) | None | OFF | Measure baseline single-model accuracy |
+| **B** | 3-Agent Clean Pipeline ($D \rightarrow S \rightarrow V$) | None | ON | Measure clean multi-agent baseline accuracy |
+| **C1** | Fault-Injected Pipeline | Decomposer (Plan Stage) | ON | Measure Solver error absorption & Verifier catch rate on plan errors |
+| **C2** | Fault-Injected Pipeline | Solver (Execution Stage) | ON | Measure Verifier catch & correction precision on execution errors |
+| **D1** | Ablated Pipeline (Verifier OFF) | Decomposer (Plan Stage) | OFF (Ablated) | Isolate natural Solver absorption without Verifier defense |
+| **D2** | Ablated Pipeline (Verifier OFF) | Solver (Execution Stage) | OFF (Ablated) | Isolate causal Verifier contribution on execution errors |
 
-*Paired experimental design with fixed problem samples ($n=200$) across every condition.*
+*Paired experimental design evaluated on fixed problem samples ($n=200$) across every condition. Scripted fault injection (`src/injection.py`) provides exact ground truth.*
 
 ---
 
