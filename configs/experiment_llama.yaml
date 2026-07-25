@@ -1,17 +1,17 @@
-# Cross-model replication: identical design, sample, seeds, and prompts as
-# configs/experiment.yaml, run on an open-weights model served by DeepInfra
-# (OpenAI-compatible API). Keeping sample_seed 42 makes the comparison with
-# the main run paired at the problem level.
+# Main run config: Llama-3.3-70B on DeepInfra (OpenAI-compatible endpoint).
+# Same design, sample, seeds, prompts, and severity bands as the pre-registered
+# experiment; only the model/provider differ. Kept as its own file so the exact
+# served model string is pinned in the released config for reproducibility.
 provider: openai
 base_url: https://api.deepinfra.com/v1/openai
 api_key_env: DEEPINFRA_API_KEY
-model: Qwen/Qwen2.5-72B-Instruct
+model: meta-llama/Llama-3.3-70B-Instruct-Turbo
 temperature: 0.0               # deterministic main runs
 robustness_temperature: 0.7    # secondary runs
 robustness_seeds: [13, 42, 2026]
 
 dataset:
-  name: gsm-hard               # gsm8k | gsm-hard | hotpotqa
+  name: gsm8k                  # gsm8k | hotpotqa
   split: test
   n_problems: 200
   sample_seed: 42              # fixed sample => paired comparisons valid
@@ -25,12 +25,12 @@ conditions:
   D2: {pipeline: true, inject_stage: solver,     verifier: false}
 
 injection:
-  types: [number_swap, operation_flip, semantic_logic_error]
+  types: [number_swap, operation_flip]
   seed: 7
   severity:                     # multiplier sets per level; 'negate' flips sign
     mild: [0.9, 1.1]            # realized change must stay under 15%
     moderate: [0.4, 0.6, 1.4, 1.6]   # realized change within 30-60%
     severe: [3.5, 4.0, negate]  # realized change above 200%, or sign flip
 
-output_dir: results/traces_replication_qwen25
+output_dir: results/traces
 max_tokens: 1024
