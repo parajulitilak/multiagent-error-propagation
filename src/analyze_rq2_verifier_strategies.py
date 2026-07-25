@@ -377,7 +377,8 @@ def main():
     
     out_file = pathlib.Path("results/rq2_verifier_strategies_report.md")
     out_file.write_text(full_md, encoding="utf-8")
-    txt_file = pathlib.Path("results/rq2_verifier_strategies_report.txt")
+    
+    txt_file = pathlib.Path("results/rq2_report.txt")
     txt_file.write_text(full_md, encoding="utf-8")
     print(f"Success! Master RQ2 report saved to: {out_file.absolute()} and {txt_file.absolute()}")
 

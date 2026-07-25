@@ -279,9 +279,7 @@ def main():
     out_md = "\n".join(report)
     out_path = pathlib.Path("results/model_comparison_report.md")
     out_path.write_text(out_md, encoding="utf-8")
-    txt_path = pathlib.Path("results/model_comparison_report.txt")
-    txt_path.write_text(out_md, encoding="utf-8")
-    print(f"\nSuccess! Comparison report generated at: {out_path.absolute()} and {txt_path.absolute()}")
+    print(f"\nSuccess! Comparison report generated at: {out_path.absolute()}")
 
 if __name__ == "__main__":
     main()

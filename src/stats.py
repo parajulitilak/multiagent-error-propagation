@@ -237,9 +237,6 @@ def report_robustness(base: pathlib.Path):
 
 
 def main():
-    import sys
-    import io
-    
     ap = argparse.ArgumentParser()
     ap.add_argument("--traces", default="results/traces")
     ap.add_argument("--pairs", nargs="*",
@@ -249,69 +246,64 @@ def main():
                     help="summarise robustness replicates under DIR instead")
     args = ap.parse_args()
 
-    # Capture output to buffer while printing
-    buffer = io.StringIO()
-    class Tee:
-        def __init__(self, *streams):
-            self.streams = streams
-        def write(self, data):
-            for s in self.streams:
-                s.write(data)
-        def flush(self):
-            for s in self.streams:
-                s.flush()
+    lines = []
+    def log(msg=""):
+        lines.append(msg)
 
-    sys.stdout = Tee(sys.__stdout__, buffer)
+    if args.robustness:
+        report_robustness(pathlib.Path(args.robustness))
+        return
 
-    try:
-        if args.robustness:
-            report_robustness(pathlib.Path(args.robustness))
-        else:
-            d = pathlib.Path(args.traces)
-            conds = sorted(p.stem for p in d.glob("*.jsonl"))
-            data = {c: load(d, c) for c in conds}
+    d = pathlib.Path(args.traces)
+    conds = sorted(p.stem for p in d.glob("*.jsonl"))
+    data = {c: load(d, c) for c in conds}
 
-            print("=== Accuracy with 95% bootstrap CI ===")
-            for c in conds:
-                flags = [int(t["extra"]["correct"]) for t in data[c].values()]
-                acc = sum(flags) / len(flags)
-                lo, hi = bootstrap_ci(flags)
-                print(f"  {c}: {acc:.3f}  [{lo:.3f}, {hi:.3f}]  n={len(flags)}")
+    log("=== Accuracy with 95% bootstrap CI ===")
+    for c in conds:
+        flags = [int(t["extra"]["correct"]) for t in data[c].values()]
+        acc = sum(flags) / len(flags)
+        lo, hi = bootstrap_ci(flags)
+        log(f"  {c}: {acc:.3f}  [{lo:.3f}, {hi:.3f}]  n={len(flags)}")
 
-            print("\n=== McNemar exact (paired), Holm-Bonferroni corrected ===")
-            tested = [(pair, mcnemar_exact(data[x], data[y]))
-                      for pair in args.pairs
-                      for x, y in [pair.split(":")]
-                      if x in data and y in data]
-            adj = holm([r["p_value"] for _, r in tested])
-            for (pair, r), p_adj in zip(tested, adj):
-                print(f"  {pair}: {r}  p_holm={p_adj:.4f}")
+    log("\n=== McNemar exact (paired), Holm-Bonferroni corrected ===")
+    tested = [(pair, mcnemar_exact(data[x], data[y]))
+              for pair in args.pairs
+              for x, y in [pair.split(":")]
+              if x in data and y in data]
+    adj = holm([r["p_value"] for _, r in tested])
+    for (pair, r), p_adj in zip(tested, adj):
+        log(f"  {pair}: {r}  p_holm={p_adj:.4f}")
 
-            print("\n=== Error fate (injected conditions vs clean B) ===")
-            if "B" in data:
-                for c in conds:
-                    if c.startswith(("C", "D")):
-                        print(f"  {c}: {error_fate(data[c], data['B'])}")
+    log("\n=== Error fate (injected conditions vs clean B) ===")
+    if "B" in data:
+        for c in conds:
+            if c.startswith(("C", "D")):
+                log(f"  {c}: {error_fate(data[c], data['B'])}")
 
-            print("\n=== Fault survival logit (H2): odds ratios ===")
-            survival_logit(data)
+    log("\n=== Fault survival logit (H2): odds ratios ===")
+    # Capture survival logit output
+    import io
+    from contextlib import redirect_stdout
+    f = io.StringIO()
+    with redirect_stdout(f):
+        survival_logit(data)
+    log(f.getvalue().strip())
 
-            print("\n=== Token cost ===")
-            for c in conds:
-                total = token_cost(data[c])
-                solved = sum(t["extra"]["correct"] for t in data[c].values())
-                per_solved = f"{total / solved:.0f}" if solved else "n/a"
-                print(f"  {c}: {total} tokens total, {per_solved} per solved problem")
-    finally:
-        sys.stdout = sys.__stdout__
+    log("\n=== Token cost ===")
+    for c in conds:
+        total = token_cost(data[c])
+        solved = sum(t["extra"]["correct"] for t in data[c].values())
+        per_solved = f"{total / solved:.0f}" if solved else "n/a"
+        log(f"  {c}: {total} tokens total, {per_solved} per solved problem")
 
-    # Save to txt file (overwriting old data)
-    txt_out = buffer.getvalue()
-    out_dir = pathlib.Path(args.traces) if not args.robustness else pathlib.Path(args.robustness)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    report_file = out_dir / "stats_report.txt"
-    report_file.write_text(txt_out, encoding="utf-8")
-    print(f"\n[Report saved to: {report_file.absolute()}]")
+    full_report = "\n".join(lines)
+    print(full_report)
+
+    # Save report to results/rq1_report.txt (overwriting)
+    out_file = pathlib.Path("results/rq1_report.txt")
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+    out_file.write_text(full_report, encoding="utf-8")
+    print(f"\n[Saved RQ1 report to {out_file.absolute()}]")
 
 
 if __name__ == "__main__":
