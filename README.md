@@ -1,8 +1,35 @@
 # Multi-Agent Error Propagation & Verification Resilience
 
+Controlled fault-injection study of error propagation in LLM agent pipelines (Decomposer → Solver → Verifier), with single-agent baselines, verifier ablations, prompting strategy evaluations (Direct, Chain-of-Thought, Rubric), and paired statistical testing.
+
+**SISTER 2026 · AI/ML Track (Dubai CS Society + Delta Rising Foundation)**  
+Authors: Tilak Parajuli, Johnny Kozman
+
+---
+
+## ❓ Research Questions & Overview
+
 This repository contains the official implementation, datasets, traces, and analytical reports for the **SISTER Program** research paper on **Multi-Agent Error Propagation and Verification Resilience**.
 
-The project investigates how errors introduced at different stages of a cooperative multi-agent LLM pipeline (Planning/Decomposer vs. Execution/Solver) propagate to the final answer, how models naturally absorb errors, and how verifier prompting strategies (**Direct**, **Chain-of-Thought**, and **Rubric**) mitigate systemic failure.
+The project investigates:
+1. When LLM agents are chained into a pipeline, do mistakes made by early agents get caught, corrected, or amplified by later agents?
+2. How do errors introduced at different stages (Planning/Decomposer vs. Execution/Solver) propagate to the final answer?
+3. How do verifier prompting strategies (**Direct**, **Chain-of-Thought**, and **Rubric**) mitigate systemic pipeline failure?
+
+---
+
+## 🔬 Experimental Design
+
+| Condition | Description |
+| :--- | :--- |
+| **A** | Single agent, end-to-end baseline |
+| **B** | Clean 3-agent pipeline (Decomposer → Solver → Verifier) |
+| **C1** | Pipeline + controlled fault injected at Decomposer (Plan stage) |
+| **C2** | Pipeline + controlled fault injected at Solver (Execution stage) |
+| **D1** | C1 with Verifier removed (ablation) |
+| **D2** | C2 with Verifier removed (ablation) |
+
+*Paired design with fixed problem samples across every condition. Fault injection is fully scripted (`src/injection.py`) with ground truth tracked.*
 
 ---
 
@@ -30,7 +57,8 @@ The project investigates how errors introduced at different stages of a cooperat
 │   ├── experiment_rubric.yaml        # Claude Sonnet Rubric Checklist
 │   ├── replication_deepinfra.yaml    # Qwen 2.5 72B Direct Baseline
 │   ├── replication_qwen_cot.yaml     # Qwen 2.5 72B Chain-of-Thought
-│   └── replication_qwen_rubric.yaml  # Qwen 2.5 72B Rubric Checklist
+│   ├── replication_qwen_rubric.yaml  # Qwen 2.5 72B Rubric Checklist
+│   └── pilot.yaml                    # Pilot run configuration
 │
 ├── src/                              # Core python source code
 │   ├── pipeline.py                   # Multi-agent execution loop & prompt definitions
@@ -55,6 +83,10 @@ The project investigates how errors introduced at different stages of a cooperat
 │   ├── rq2_verifier_strategies_report.md # Comprehensive RQ2 Markdown Report
 │   └── model_comparison_report.md    # Model comparison report
 │
+├── paper/                            # LaTeX paper source code & figure assets
+│   ├── main.tex                      # Main paper draft
+│   └── proposal.tex                  # Research proposal document
+│
 ├── .env.example                      # Template for API credentials
 └── README.md                         # Project documentation
 ```
@@ -65,7 +97,7 @@ The project investigates how errors introduced at different stages of a cooperat
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/your-username/multiagent-error-propagation.git
+git clone https://github.com/parajulitilak/multiagent-error-propagation.git
 cd multiagent-error-propagation
 pip install -r requirements.txt
 ```
@@ -140,6 +172,12 @@ python -m src.compare_models
 
 ---
 
+## 📜 Reproducibility Contract
+
+Fixed sample seeds, fixed injection seeds, temperature 0 for main runs, exact model strings pinned in configs, all prompts in `src/pipeline.py`, and every number in the paper regenerable via the analysis scripts.
+
+---
+
 ## 🧪 Running Unit Tests
 To verify pipeline integrity, fault injectors, and verifier parsing:
 ```bash
@@ -148,5 +186,5 @@ python -m unittest tests/test_harness.py
 
 ---
 
-## 📜 Citation & License
-Developed as part of the SISTER Research Program. Released under the MIT License.
+## 📜 License
+Released under the MIT License.
