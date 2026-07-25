@@ -16,6 +16,8 @@
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc}
 \usepackage{microtype} % NOTE: if a local build errors on font expansion, use [expansion=false]
 \usepackage[colorlinks=true, citecolor=blue, urlcolor=blue, linkcolor=blue]{hyperref}
 \usepackage{caption}
@@ -145,7 +147,7 @@ MAST classifies failures that occurred in the wild, we induce failures under
 control; the two are complementary in the way epidemiology and randomized
 trials are. Mitigation systems are now being engineered against exactly this
 phenomenon: DebUnc~\citep{yoffe2024debunc} attaches uncertainty metrics to inter-agent messages so
-that unreliable ones can be discounted, and ~\citep{xie2026spark} model error cascades on the agent dependency graph and
+that unreliable ones can be discounted, and~\citep{xie2026spark} model error cascades on the agent dependency graph and
 add a governance layer that suppresses them. Both presuppose that upstream
 errors propagate downstream. Our study measures that presupposition directly
 and quantifies how much protection a standard verifier stage already
@@ -183,11 +185,131 @@ if it rejects. Each stage is a separate LLM call with its own role prompt
 preceding artifact, mirroring common framework defaults. A single-agent
 baseline computes $\hat{y}$ from one call on $x$ alone.
 
+% Figure
 \begin{figure}[t]
 \centering
-\includegraphics[width=.95\linewidth]{Fig1.png}
-\caption{The Decomposer--Solver--Verifier pipeline with the two
-injection points marked. }
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    >=Latex,
+    font=\sffamily,
+    io/.style={
+        draw=gray!70!black,
+        fill=white,
+        rounded corners=8pt,
+        minimum width=2.5cm,
+        minimum height=1.4cm,
+        align=center,
+        line width=0.9pt
+    },
+    stage/.style 2 args={
+        draw=#1!70!black,
+        fill=#1!85,
+        rounded corners=10pt,
+        minimum width=3.2cm,
+        minimum height=2.3cm,
+        align=center,
+        text=white,
+        font=\bfseries\Large,
+        line width=1pt
+    },
+    artifact/.style={
+        rounded corners=10pt,
+        minimum width=3.5cm,
+        minimum height=1.05cm,
+        align=center,
+        fill=white,
+        line width=1pt,
+        font=\large
+    },
+    inj/.style={
+        circle,
+        draw=red!85!black,
+        dashed,
+        line width=1.2pt,
+        minimum size=13mm,
+        inner sep=0pt
+    },
+    flow/.style={->, line width=1.2pt, draw=black!85},
+    note/.style={font=\bfseries\large, text=red!85!black},
+    dottedlink/.style={dotted, line width=1.4pt}
+]
+
+% Main nodes
+\node[io] (problem) {Problem $x$};
+
+\node[stage={teal}{}, right=1.8cm of problem] (decomp) {Decomposer};
+
+\node[inj, right=1.1cm of decomp] (inj1) {};
+\draw[red!85!black, line width=1.3pt]
+    ($(inj1.center)+(0,0.34)$) --
+    ($(inj1.center)+(0.11,0.07)$) --
+    ($(inj1.center)+(0.01,0.07)$) --
+    ($(inj1.center)+(0.09,-0.20)$) --
+    ($(inj1.center)+(-0.10,-0.01)$) --
+    ($(inj1.center)+(-0.01,-0.01)$) -- cycle;
+
+\node[stage={orange}{}, right=1.1cm of inj1] (solver) {Solver};
+
+\node[inj, right=1.1cm of solver] (inj2) {};
+\draw[red!85!black, line width=1.3pt]
+    ($(inj2.center)+(0,0.34)$) --
+    ($(inj2.center)+(0.11,0.07)$) --
+    ($(inj2.center)+(0.01,0.07)$) --
+    ($(inj2.center)+(0.09,-0.20)$) --
+    ($(inj2.center)+(-0.10,-0.01)$) --
+    ($(inj2.center)+(-0.01,-0.01)$) -- cycle;
+
+\node[stage={green!60!black}{}, right=1.1cm of inj2] (verifier) {Verifier};
+
+\node[io, right=1.8cm of verifier] (answer) {Final answer $\hat{y}$};
+
+% Arrows
+\draw[flow] (problem) -- (decomp);
+\draw[flow] (decomp) -- (inj1);
+\draw[flow] (inj1) -- (solver);
+\draw[flow] (solver) -- (inj2);
+\draw[flow] (inj2) -- (verifier);
+\draw[flow] (verifier) -- (answer);
+
+% Artifact boxes
+\node[artifact, draw=teal!70!black, below=1.45cm of decomp] (plan) {plan $d = D(x)$};
+\node[artifact, draw=orange!80!black, below=1.45cm of solver] (soln) {solution $s = S(x,d)$};
+\node[artifact, draw=green!50!black, below=1.45cm of verifier] (verd) {verdict $v = V(x,s)$};
+
+\draw[dottedlink, teal!70!black] (decomp.south) -- (plan.north);
+\draw[dottedlink, orange!80!black] (solver.south) -- (soln.north);
+\draw[dottedlink, green!50!black] (verifier.south) -- (verd.north);
+
+% Injection labels
+\node[note, above=0.45cm of inj1] {C1 / D1};
+\node[note, above=0.45cm of inj2] {C2 / D2};
+
+% Legend
+\node[
+    draw=gray!60,
+    rounded corners=4pt,
+    fill=white,
+    minimum width=5.8cm,
+    minimum height=0.70cm,
+    anchor=north east,
+    font=\scriptsize
+] at ($(answer.south east)+(0,-3.95)$) (legendbox) {};
+
+\node[inj, minimum size=5mm] at ($(legendbox.west)+(0.45,0)$) (leginj) {};
+\draw[red!85!black, line width=0.7pt]
+    ($(leginj.center)+(0,0.14)$) --
+    ($(leginj.center)+(0.05,0.03)$) --
+    ($(leginj.center)+(0.01,0.03)$) --
+    ($(leginj.center)+(0.04,-0.08)$) --
+    ($(leginj.center)+(-0.05,-0.01)$) --
+    ($(leginj.center)+(-0.01,-0.01)$) -- cycle;
+
+\node[anchor=west, font=\normalsize] at ($(legendbox.west)+(0.85,0)$)
+{= controlled fault injection};
+
+\end{tikzpicture}
+}
+\caption{The Decomposer--Solver--Verifier pipeline with the two injection points marked.}
 \label{fig:pipeline}
 \end{figure}
 
