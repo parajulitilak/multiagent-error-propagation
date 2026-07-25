@@ -100,25 +100,12 @@ def error_fate(injected: dict, clean: dict):
     """
     has_verifier = any(t.get("verifier_output") for t in injected.values())
     fates = Counter()
-    type_counts = Counter()
-    severity_counts = Counter()
-    severity_propagated = Counter()
     ids = [i for i in injected
            if injected[i].get("injection_meta", {}) and
               injected[i]["injection_meta"].get("applied") and
               i in clean and clean[i]["extra"]["correct"]]
     for i in ids:
         t = injected[i]
-        meta = t.get("injection_meta") or {}
-        type_counts[meta.get("type", "unknown")] += 1
-        
-        # Track severity outcomes for number swaps
-        if meta.get("type") == "number_swap" and "severity" in meta:
-            sev = meta["severity"]
-            severity_counts[sev] += 1
-            if not t["extra"]["correct"]:
-                severity_propagated[sev] += 1
-                
         correct = t["extra"]["correct"]
         if not has_verifier:
             fates["propagated" if not correct else "absorbed"] += 1
@@ -138,23 +125,9 @@ def error_fate(injected: dict, clean: dict):
     else:
         prop = fates["propagated"]
     lo, hi = wilson(prop, total) if total else (0, 0)
-    
-    type_freq = {k: f"{v}/{total} ({v/total*100:.1f}%)" for k, v in type_counts.items()}
-    
-    severity_rates = {}
-    for sev in ["mild", "moderate", "severe"]:
-        total_sev = severity_counts[sev]
-        if total_sev > 0:
-            prop_sev = severity_propagated[sev]
-            severity_rates[sev] = f"{prop_sev}/{total_sev} ({prop_sev/total_sev*100:.1f}%)"
-            
     out = {"n_valid_injections": total, **fates,
            "propagation_rate": prop / total if total else None,
-           "propagation_wilson95": (round(lo, 3), round(hi, 3)),
-           "injection_types": type_freq}
-    if severity_rates:
-        out["severity_propagation"] = severity_rates
-        
+           "propagation_wilson95": (round(lo, 3), round(hi, 3))}
     if has_verifier:
         caught = fates["caught_and_corrected"] + fates["caught_not_corrected"]
         clo, chi = wilson(caught, total) if total else (0, 0)
@@ -192,8 +165,7 @@ def survival_logit(data: dict):
                 continue
             rows.append((0 if t["extra"]["correct"] else 1,
                          early,
-                         1 if meta.get("type") == "operation_flip" else 0,
-                         1 if meta.get("type") == "semantic_logic_error" else 0))
+                         1 if meta.get("type") == "operation_flip" else 0))
     if len(rows) < 20:
         print(f"  skipped: only {len(rows)} usable injections")
         return
@@ -204,7 +176,7 @@ def survival_logit(data: dict):
     except Exception as e:
         print(f"  logit failed ({e}); report raw rates instead")
         return
-    names = ["intercept", "early_stage", "operation_flip", "semantic_logic_error"]
+    names = ["intercept", "early_stage", "operation_flip"]
     ors = np.exp(fit.params)
     cis = np.exp(fit.conf_int())
     for name, o, (lo, hi), p in zip(names, ors, cis, fit.pvalues):
@@ -254,10 +226,6 @@ def main():
                     help="summarise robustness replicates under DIR instead")
     args = ap.parse_args()
 
-    lines = []
-    def log(msg=""):
-        lines.append(msg)
-
     if args.robustness:
         report_robustness(pathlib.Path(args.robustness))
         return
@@ -266,52 +234,37 @@ def main():
     conds = sorted(p.stem for p in d.glob("*.jsonl"))
     data = {c: load(d, c) for c in conds}
 
-    log("=== Accuracy with 95% bootstrap CI ===")
+    print("=== Accuracy with 95% bootstrap CI ===")
     for c in conds:
         flags = [int(t["extra"]["correct"]) for t in data[c].values()]
         acc = sum(flags) / len(flags)
         lo, hi = bootstrap_ci(flags)
-        log(f"  {c}: {acc:.3f}  [{lo:.3f}, {hi:.3f}]  n={len(flags)}")
+        print(f"  {c}: {acc:.3f}  [{lo:.3f}, {hi:.3f}]  n={len(flags)}")
 
-    log("\n=== McNemar exact (paired), Holm-Bonferroni corrected ===")
+    print("\n=== McNemar exact (paired), Holm-Bonferroni corrected ===")
     tested = [(pair, mcnemar_exact(data[x], data[y]))
               for pair in args.pairs
               for x, y in [pair.split(":")]
               if x in data and y in data]
     adj = holm([r["p_value"] for _, r in tested])
     for (pair, r), p_adj in zip(tested, adj):
-        log(f"  {pair}: {r}  p_holm={p_adj:.4f}")
+        print(f"  {pair}: {r}  p_holm={p_adj:.4f}")
 
-    log("\n=== Error fate (injected conditions vs clean B) ===")
+    print("\n=== Error fate (injected conditions vs clean B) ===")
     if "B" in data:
         for c in conds:
             if c.startswith(("C", "D")):
-                log(f"  {c}: {error_fate(data[c], data['B'])}")
+                print(f"  {c}: {error_fate(data[c], data['B'])}")
 
-    log("\n=== Fault survival logit (H2): odds ratios ===")
-    # Capture survival logit output
-    import io
-    from contextlib import redirect_stdout
-    f = io.StringIO()
-    with redirect_stdout(f):
-        survival_logit(data)
-    log(f.getvalue().strip())
+    print("\n=== Fault survival logit (H2): odds ratios ===")
+    survival_logit(data)
 
-    log("\n=== Token cost ===")
+    print("\n=== Token cost ===")
     for c in conds:
         total = token_cost(data[c])
         solved = sum(t["extra"]["correct"] for t in data[c].values())
         per_solved = f"{total / solved:.0f}" if solved else "n/a"
-        log(f"  {c}: {total} tokens total, {per_solved} per solved problem")
-
-    full_report = "\n".join(lines)
-    print(full_report)
-
-    # Save report to results/rq1_report.txt (overwriting)
-    out_file = pathlib.Path("results/rq1_report.txt")
-    out_file.parent.mkdir(parents=True, exist_ok=True)
-    out_file.write_text(full_report, encoding="utf-8")
-    print(f"\n[Saved RQ1 report to {out_file.absolute()}]")
+        print(f"  {c}: {total} tokens total, {per_solved} per solved problem")
 
 
 if __name__ == "__main__":

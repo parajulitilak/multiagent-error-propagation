@@ -42,18 +42,6 @@ def load_gsm8k(n: int, seed: int, split: str = "test"):
     return items
 
 
-def load_gsm_hard(n: int, seed: int):
-    from datasets import load_dataset
-    ds = load_dataset("reasoning-machines/gsm-hard", split="train")
-    idx = random.Random(seed).sample(range(len(ds)), n)
-    items = []
-    for i in idx:
-        q = ds[i]["input"]
-        gold = str(ds[i]["target"]).strip().replace(",", "")
-        items.append({"id": f"gsmhard-train-{i}", "question": q, "gold": gold})
-    return items
-
-
 def normalize(ans: str) -> str:
     ans = (ans or "").strip().replace(",", "").replace("$", "")
     # An answer written as an expression ("91 + 182 = 273") states its value
@@ -80,7 +68,7 @@ def run_condition(name: str, spec: dict, items: list, cfg: dict, out_dir: pathli
     injector = None
     if spec.get("inject_stage"):
         injector = make_injector(cfg["injection"]["types"], cfg["injection"]["seed"],
-                                 cfg["injection"].get("severity"), cfg)
+                                 cfg["injection"].get("severity"))
     rng = random.Random(cfg["injection"]["seed"])
 
     out_path = out_dir / f"{name}.jsonl"
@@ -137,15 +125,11 @@ def main():
     cfg = yaml.safe_load(open(args.config))
 
     ds = cfg["dataset"]
-    dataset_name = ds.get("name", "gsm8k")
-    if dataset_name == "gsm8k":
-        items = load_gsm8k(ds["n_problems"], ds["sample_seed"], ds["split"])
-    elif dataset_name == "gsm-hard":
-        items = load_gsm_hard(ds["n_problems"], ds["sample_seed"])
-    else:
+    if ds.get("name", "gsm8k") != "gsm8k":
         raise SystemExit(
-            f"dataset '{dataset_name}' is not implemented yet (gsm8k | gsm-hard)"
+            f"dataset '{ds['name']}' is not implemented yet (only gsm8k)"
         )
+    items = load_gsm8k(ds["n_problems"], ds["sample_seed"], ds["split"])
     print(f"Loaded {len(items)} problems (seed={ds['sample_seed']}); "
           f"same fixed sample for every condition (paired design).")
 
