@@ -5,13 +5,13 @@
 provider: openai
 base_url: https://api.deepinfra.com/v1/openai
 api_key_env: DEEPINFRA_API_KEY
-model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+model: Qwen/Qwen2.5-72B-Instruct
 temperature: 0.0               # deterministic main runs
 robustness_temperature: 0.7    # secondary runs
 robustness_seeds: [13, 42, 2026]
 
 dataset:
-  name: gsm8k                  # gsm8k | hotpotqa
+  name: gsm-hard               # gsm8k | gsm-hard | hotpotqa
   split: test
   n_problems: 200
   sample_seed: 42              # fixed sample => paired comparisons valid
@@ -25,8 +25,12 @@ conditions:
   D2: {pipeline: true, inject_stage: solver,     verifier: false}
 
 injection:
-  types: [number_swap, operation_flip]
+  types: [number_swap, operation_flip, semantic_logic_error]
   seed: 7
+  severity:                     # multiplier sets per level; 'negate' flips sign
+    mild: [0.9, 1.1]            # realized change must stay under 15%
+    moderate: [0.4, 0.6, 1.4, 1.6]   # realized change within 30-60%
+    severe: [3.5, 4.0, negate]  # realized change above 200%, or sign flip
 
-output_dir: results/traces_replication_llama33
+output_dir: results/traces_replication_qwen25
 max_tokens: 1024
