@@ -569,9 +569,11 @@ bad corrections, while chain-of-thought and rubric verifiers greatly improve
 correction precision and reduce final propagation. For practitioners, the main
 implication is that verification is significantly more critical for validating
 the solver's execution rather than the planner's plan. Because solvers naturally
-absorb many plan-stage errors, plan-level verification is largely redundant.
-By contrast, execution-stage errors propagate directly to the output unless a
-verifier is present at the solver boundary. When verification is deployed,
+absorb many plan-stage errors (absorbing 125 out of 139 plan injections in our Claude Sonnet 4.6 runs),
+plan-level verification is largely redundant, only reducing propagation from 8.6\% (without a verifier, D1)
+to 5.0\% (with a verifier, C1). By contrast, execution-stage errors propagate directly to the
+output unless a verifier is present at the solver boundary, where it cuts propagation in half, from 27.3\% (D2)
+to 12.9\% (C2). When verification is deployed,
 structured verifier prompts are preferable when correction quality matters,
 justifying their 24--31\% token cost premium. More broadly, the results suggest that the
 reliability of agent pipelines depends not only on whether a verifier exists,
