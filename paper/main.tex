@@ -392,10 +392,13 @@ level.}
 \label{sec:strategies}
 The verifier is the pipeline's final stage, and every run stores the exact
 problem and proposed solution the verifier receives. We compare three verifier
-prompt strategies on matched experimental conditions: V1, the direct verifier
-used in the main run; V2, a chain-of-thought verifier instructed to re-derive
-the solution before judging; and V3, a rubric verifier that checks an explicit
-list of failure points. Because the same problem sample, injection design, and
+prompt strategies on matched experimental conditions: \emph{V1} (Direct, represented
+as \texttt{direct} in the codebase), the baseline direct verifier used in our main
+runs; \emph{V2} (Chain-of-Thought, represented as \texttt{cot}), a chain-of-thought
+verifier instructed to generate step-by-step reasoning before outputting a verdict;
+and \emph{V3} (Rubric, represented as \texttt{rubric}), a rubric verifier that
+systematically evaluates the solution against four explicit checks (reading, variables,
+operations, and calculations). Because the same problem sample, injection design, and
 condition structure are held fixed across strategies, differences in catch rate,
 correction rate, and propagation are attributable to verifier prompting rather
 than upstream pipeline variation.
