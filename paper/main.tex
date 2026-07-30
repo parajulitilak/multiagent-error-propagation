@@ -397,7 +397,7 @@ as \texttt{direct} in the codebase), the baseline direct verifier used in our ma
 runs; \emph{V2} (Chain-of-Thought, represented as \texttt{cot}), a chain-of-thought
 verifier instructed to generate step-by-step reasoning before outputting a verdict;
 and \emph{V3} (Rubric, represented as \texttt{rubric}), a rubric verifier that
-systematically evaluates the solution against four explicit checks (reading, variables,
+systematically evaluates the solution against four explicit checks (reading and assumptions, variables,
 operations, and calculations). Because the same problem sample, injection design, and
 condition structure are held fixed across strategies, differences in catch rate,
 correction rate, and propagation are attributable to verifier prompting rather
