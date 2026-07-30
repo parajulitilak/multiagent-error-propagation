@@ -338,7 +338,10 @@ quantity with a wrong value drawn from a severity-controlled multiplier set;
 (\emph{add}$\leftrightarrow$\emph{subtract},
 \emph{multiply}$\leftrightarrow$\emph{divide}, and analogous pairs); and
 \emph{semantic logic error}, which rewrites a plan or solution to introduce a
-single logical reasoning flaw while preserving fluent surface form. List and
+single logical reasoning flaw while preserving fluent surface form. Programmatically,
+number swaps and operation flips are executed rule-based via regular expression matching,
+while semantic logic errors are generated dynamically via a separate LLM call using a
+dedicated fault-injection prompt. List and
 step labels are excluded from number swap: corrupting ``Step 1'' changes no
 quantity, and admitting such perturbations would dilute the injected-fault
 population with harmless cases and bias propagation rates downward.
