@@ -500,6 +500,8 @@ detects faults but fails during repair, whereas chain-of-thought and rubric
 verifiers are substantially better at converting detection into correct final
 answers.
 
+\textbf{How much does verification cost?} Multi-agent execution carries a substantial token overhead. The single-agent baseline (A) is highly efficient, requiring only 526 tokens per solved problem on Claude Sonnet 4.6. Moving to the clean multi-agent pipeline (B) increases this to 1,616 tokens per solved problem, a 3.1$\times$ expansion. Under fault-injected conditions (C2), verifier strategies introduce different cost profiles: direct verification averages 1,145 tokens per problem (1,892 per solved problem); chain-of-thought verification increases average token usage to 1,419 tokens per problem (a 23.9\% increase); and the rubric strategy is the most expensive at 1,503 tokens per problem (a 31.3\% increase). These measurements highlight a clear trade-off between reliability and budget: while chain-of-thought and rubric prompting reduce solver-stage fault propagation from 12.9\% to 1.4\%, they require 24--31\% more tokens than direct verification.
+
 \begin{figure}[t]\centering
 \includegraphics[width=0.85\linewidth]{fig2_acc.png}
 \caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
@@ -567,7 +569,8 @@ bad corrections, while chain-of-thought and rubric verifiers greatly improve
 correction precision and reduce final propagation. For practitioners, the main
 implication is that verification budget is most valuable at the solver-to-
 verifier boundary and that structured verifier prompts are preferable when
-correction quality matters. More broadly, the results suggest that the
+correction quality matters, justifying their 24--31\% token cost premium.
+More broadly, the results suggest that the
 reliability of agent pipelines depends not only on whether a verifier exists,
 but on where faults arise and how the verifier is instructed to reason about
 them.
@@ -600,7 +603,10 @@ tightening the solver prompt's plan adherence, so that plan-stage faults are
 not absorbed by silent re-derivation and the planning-stage estimate is
 sharpened; comparing a small verifier fine-tuned with QLoRA~\citep{dettmers2023qlora}
 on the released traces against the LLM judge, to test whether low-cost
-specialized oversight can match it; and evaluating learned inter-agent
+specialized oversight can match it; investigating dynamic verifier gating
+(e.g., only invoking the more expensive chain-of-thought or rubric verifiers
+when the solver expresses high uncertainty) to optimize the token cost budget;
+and evaluating learned inter-agent
 gating in the style of DebUnc~\citep{yoffe2024debunc} under our injection
 protocol, which would connect the measurement in this paper to the
 mitigation literature it motivates.
