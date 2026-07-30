@@ -844,4 +844,38 @@ splitting into groups.''
 $\rightarrow$ ``Compare the amount with the target before subtracting the
 intermediate cost.''
 
+\subsection*{C \quad Representative run trace}
+Below is a representative trace from our experimental runs (problem ID: \texttt{gsmhard-train-1209}), showing how a plan-stage number swap is propagated by the solver and subsequently corrected by the verifier:
+
+\paragraph{Problem.}
+\begin{quote}
+\textit{The local firefighters are doing a ``fill the boot'' fundraiser. Their goal is to raise \$3522385. After the first 3 hours, they have raised \$2100. For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?}
+\end{quote}
+
+\paragraph{Decomposer plan.}
+\begin{quote}
+\textit{1. Calculate the amount raised per hour by dividing \$2100 by 3 hours.\\
+2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
+\end{quote}
+
+\paragraph{Injected plan-stage fault (C1 condition - Number swap).}
+\begin{quote}
+\textit{1. Calculate the amount raised per hour by dividing \textbf{\$1890} by 3 hours.\\
+2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
+\end{quote}
+
+\paragraph{Solver execution.}
+\begin{quote}
+\textit{Step 1: Calculate the amount raised per hour: \$1890 $\div$ 3 = \$630 per hour.\\
+Step 2: Divide the total goal by the hourly rate: \$3,522,385 $\div$ \$630 = 5,591.88... Rounding up to complete the goal: 5,592 hours.\\
+FINAL ANSWER: 5592}
+\end{quote}
+
+\paragraph{Verifier verdict \& correction.}
+\begin{quote}
+\textit{The problem states they raised \$2100 in the first 3 hours, giving a rate of \$2100 $\div$ 3 = \$700 per hour. The proposed solution incorrectly uses \$1890 and \$630 per hour instead. The correct calculation is \$3,522,385 $\div$ \$700 = 5,031.978..., which rounds up to 5,032 hours.\\
+VERDICT: REJECT\\
+FINAL ANSWER: 5032}
+\end{quote}
+
 \end{document}
