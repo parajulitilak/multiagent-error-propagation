@@ -425,7 +425,7 @@ runs and 0.7 for robustness replications; cross-model replications use Qwen
 GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
 held fixed, with operators and severity levels as in
 \S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~A. Total API cost: \pending{\$XX}. All configuration is specified through released YAML
+verbatim in Appendix~A. Total API cost: \sim\$28. All configuration is specified through released YAML
 files in the repository, and the analysis scripts regenerate the reported
 condition-level, verifier-strategy, and model-comparison results from the
 released traces.
@@ -494,16 +494,33 @@ verifiers are substantially better at converting detection into correct final
 answers.
 
 \begin{figure}[t]\centering
-\caption{Accuracy by condition with 95\% bootstrap intervals.
-\pending{pending}}\label{fig:acc}
+\includegraphics[width=0.85\linewidth]{fig2_acc.png}
+\caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
 \end{figure}
+
 \begin{figure}[t]\centering
-\caption{Fate of injected faults by injection stage.
-\pending{pending}}\label{fig:fate}
+\includegraphics[width=0.85\linewidth]{fig3_acc.png}
+\caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
 \end{figure}
-\begin{table}[t]\centering
-\caption{Catch rate by verifier strategy, error type, and severity.
-\pending{pending}}\label{tab:map}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Condition / Stratum} & Catch \% & Correct \% & Catch \% & Correct \% & Catch \% & Correct \% \\
+\midrule
+\textbf{Plan Injected ($C_1$)} & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
+\textbf{Solver Injected ($C_2$)} & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
+\midrule
+\textbf{Mild Severity} & 0.0\% & 0.0\% & 6.7\% & 50.0\% & 0.0\% & 0.0\% \\
+\textbf{Moderate Severity} & 18.8\% & 50.0\% & 0.0\% & 0.0\% & 6.7\% & 100.0\% \\
+\textbf{Severe Severity} & 7.7\% & 50.0\% & 0.0\% & 0.0\% & 0.0\% & 0.0\% \\
+\bottomrule
+\end{tabular}
+\caption{Verifier catch rate and correction precision by prompt strategy, injection position, and fault severity (Claude Sonnet 4.6, $n=200$).}\label{tab:map}
 \end{table}
 
 \section{Analysis}
