@@ -757,45 +757,57 @@ Minfeng Qi, Huajie Chen, and Wanlei Zhou.
 \subsection*{A \quad Role prompts}
 
 \paragraph{Decomposer.}
- You are a planning agent. Break the problem into a short
-numbered plan of 2--5 concrete steps with any intermediate quantities needed.
-Do not solve it. Output only the plan.
+\begin{quote}
+\textit{You are a planning agent. Break the problem into a short numbered plan of 2-5 concrete steps with any intermediate quantities needed. Do NOT solve it. Output only the plan.}
+\end{quote}
 
 \paragraph{Solver.}
-You are a solving agent. Execute the given plan step by step
-on the problem. Show brief working, then end with the line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a solving agent. Execute the given plan step by step on the problem. Show brief working, then end with the line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Verifier (Direct).}
-You are a verification agent. Check the proposed
-solution against the original problem. If correct, reply
-\texttt{VERDICT: ACCEPT}. If you find an error, reply
-\texttt{VERDICT: REJECT}, explain the error in one sentence, and give a corrected
-line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a verification agent. Check the proposed solution against the original problem. If correct, reply 'VERDICT: ACCEPT'. If you find an error, reply 'VERDICT: REJECT', explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Verifier (Chain-of-Thought).}
-You are a verification agent. Check the
-proposed solution against the original problem. First, write down your step-by-step
-verification reasoning. Carefully identify the problem inputs, assumptions,
-mathematical operations, and calculations. Then end your response with either
-\texttt{VERDICT: ACCEPT} if the solution is correct, or
-\texttt{VERDICT: REJECT} if it is not. If you reject, explain the error in one
-sentence and provide a corrected line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a verification agent. Check the proposed solution against the original problem.\\
+First, write down your step-by-step verification reasoning (thinking out loud). In your reasoning:
+\begin{itemize}
+    \item Carefully read the original problem statement to identify all numerical inputs, constraints, and implicit/explicit assumptions.
+    \item Confirm if the proposed solution correctly read the problem and applied all necessary assumptions.
+    \item Verify the mathematical logic and calculations step-by-step.
+\end{itemize}
+Then, end your response with:\\
+VERDICT: ACCEPT (if the solution is correct)\\
+OR\\
+VERDICT: REJECT\\
+If you reject, explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Verifier (Rubric).}
-You are a verification agent. Evaluate the proposed
-solution using four checks: (1) Reading \& Assumptions, (2) Variables,
-(3) Operations, and (4) Calculations. Write down your evaluation for each
-check. Then end with either \texttt{VERDICT: ACCEPT} if all checks pass, or
-\texttt{VERDICT: REJECT} if any check fails. If you reject, explain the error
-in one sentence and provide a corrected line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a verification agent. Evaluate the proposed solution by systematically verifying these four items:
+\begin{enumerate}
+    \item Reading \& Assumptions: Did the solution correctly read the problem text, capture all conditions, and apply correct assumptions?
+    \item Variables: Are the numbers used from the question identical to the original problem?
+    \item Operations: Are the mathematical operations chosen (add/sub/mult/div) logically correct?
+    \item Calculations: Are the calculations mathematically correct?
+\end{enumerate}
+Write down your evaluation for each of the 4 points above.\\
+Then, end your response with:\\
+VERDICT: ACCEPT (if all checks pass)\\
+OR\\
+VERDICT: REJECT (if any check fails)\\
+If you reject, explain the error in one sentence, and provide a corrected line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Single agent.}
-Solve the problem step by step. End with the line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{Solve the problem step by step. End with the line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \subsection*{B \quad Injection examples}
 
