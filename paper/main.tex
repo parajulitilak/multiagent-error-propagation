@@ -28,13 +28,15 @@
 \renewcommand{\thesection}{\Roman{section}}
 
 \title{\texorpdfstring{\huge\bfseries Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}{Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}}
-\author{
-\textbf{Tilak Parajuli}$^{1}$ \qquad
-\textbf{Johnny Kozman}$^{1}$ \qquad
-\textbf{Arushi Waddepalli}$^{1}$\\[1.2em]
-$^{1}$SISTER, AI/ML Track \\
-Dubai Computer Science Society \& Delta Rising Foundation\\
-}
+\author{Tilak Parajuli\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
+\small Kathmandu, Nepal
+\and Johnny Kozman\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
+\small Cairo, Egypt
+\and Arushi Waddepalli\\
+\small SISTER 2026, AI/ML Track, Dubai Computer Science Society \& Delta Rising Foundation\\
+\small Hyderabad, India}
 \date{August 2026}
 
 \begin{document}
@@ -425,7 +427,7 @@ runs and 0.7 for robustness replications; cross-model replications use Qwen
 GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
 held fixed, with operators and severity levels as in
 \S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~A. Total API cost: \sim\$28. All configuration is specified through released YAML
+verbatim in Appendix~A. Total API cost: $\sim$\$28. All configuration is specified through released YAML
 files in the repository, and the analysis scripts regenerate the reported
 condition-level, verifier-strategy, and model-comparison results from the
 released traces.
@@ -749,7 +751,9 @@ Minfeng Qi, Huajie Chen, and Wanlei Zhou.
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 
-\section*{A \quad Role prompts}
+\section*{Appendix}
+
+\subsection*{A \quad Role prompts}
 
 \paragraph{Decomposer.}
  You are a planning agent. Break the problem into a short
@@ -792,7 +796,7 @@ in one sentence and provide a corrected line:
 Solve the problem step by step. End with the line:
 \texttt{FINAL ANSWER: \{answer\}}.
 
-\section*{B \quad Injection examples}
+\subsection*{B \quad Injection examples}
 
 \paragraph{Number swap.}
 \textbf{Number swap.}
