@@ -419,23 +419,79 @@ temperature~0 on a fixed seeded sample; robustness replications use
 temperature~0.7 over three seeds, reported as mean and interval.
 
 \subsection{Setup and reproducibility}
-Primary experiments use Claude Sonnet 4.6 with temperature 0 for the main runs and 0.7 for robustness replications; cross-model replications use Qwen 2.5 72B Instruct via DeepInfra under the same condition design. The main dataset is GSM-Hard with $n=200$ problems sampled with seed 42. Injection seed 7; operators and severity levels as in \S\ref{sec:injection}. Prompts are fixed across conditions and listed verbatim in Appendix~A. Total API cost: \sim\$28. All configuration is specified in YAML files in the released repository; analysis scripts regenerate every reported number from the released traces.
+Main experiments use Claude Sonnet 4.6 with temperature 0 for the primary
+runs and 0.7 for robustness replications; cross-model replications use Qwen
+2.5 72B Instruct under the same condition design. The main dataset is
+GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
+held fixed, with operators and severity levels as in
+\S\ref{sec:injection}. Prompts are fixed across conditions and listed
+verbatim in Appendix~A. Total API cost: \sim\$28. All configuration is specified through released YAML
+files in the repository, and the analysis scripts regenerate the reported
+condition-level, verifier-strategy, and model-comparison results from the
+released traces.
 
 \section{Results}
 
-\textbf{Does the pipeline beat one agent?} Figure~\ref{fig:acc} compares conditions A and B on the Claude Sonnet 4.6 GSM-Hard run. The clean multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for the single-agent baseline (A), a modest improvement that does not remain significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$).
+\textbf{Does the pipeline beat one agent?} Figure~\ref{fig:acc} compares
+conditions A and B on the Claude Sonnet 4.6 GSM-Hard run. The clean
+multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for
+the single-agent baseline (A), a modest improvement that does not remain
+significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$). The result
+suggests that decomposition and verification can improve end-to-end
+performance, but the gain is smaller than the downstream effects of fault
+injection and verifier ablation.
 
-\textbf{What happens to an injected fault?} Figure~\ref{fig:fate} gives the error-fate breakdown for C1 and C2. Plan-stage faults (C1) are usually absorbed before they reach the output: among 139 valid injections, 125 are absorbed without verifier intervention, only 3 silently propagate, and 7 are caught and corrected. Solver-stage faults (C2) are much more dangerous: among 139 valid injections, only 90 are absorbed, 31 are caught and corrected, 16 are caught but not corrected, and 2 silently propagate.
+\textbf{What happens to an injected fault?} Figure~\ref{fig:fate} gives the
+error-fate breakdown for C1 and C2. Plan-stage faults (C1) are usually
+absorbed before they reach the output: among 139 valid injections, 125 are
+absorbed without verifier intervention, only 3 silently propagate, and 7 are
+caught and corrected. Solver-stage faults (C2) are much more dangerous:
+among 139 valid injections, only 90 are absorbed, 31 are caught and corrected,
+16 are caught but not corrected, and 2 silently propagate. In other words,
+the verifier becomes far more active when the corruption is inserted at the
+solver stage.
 
-\textbf{Does position matter?} Yes. Propagation is substantially higher for solver-stage injection than for plan-stage injection under the direct verifier: 12.9\% in C2 versus 5.0\% in C1. The logistic model reports an odds ratio of 0.28 for the early-stage coefficient ($p = 0.0084$), indicating that plan-stage faults are significantly less likely to survive than solver-stage faults.
+\textbf{Does position matter?} Yes. Propagation is substantially higher for
+solver-stage injection than for plan-stage injection under the direct verifier:
+12.9\% in C2 versus 5.0\% in C1. The logistic model reports an odds ratio of
+0.28 for the early-stage coefficient ($p = 0.0084$), indicating that
+plan-stage faults are significantly less likely to survive than solver-stage
+faults. This pattern is consistent with the qualitative trace evidence: the
+solver often re-derives or corrects corrupted plans, whereas corrupted solver
+outputs sit directly at the boundary where the verifier must detect and repair
+them.
 
-\textbf{Does severity matter?} Severity effects are visible in number-swap results. For Claude under the direct verifier, plan-stage number-swap propagation is 11.1\% for mild faults, 5.9\% for moderate faults, and 6.7\% for severe faults; solver-stage number-swap propagation is 0.0\%, 18.8\%, and 7.7\% for mild, moderate, and severe faults, respectively.
+\textbf{Does severity matter?} Severity effects are visible but are weaker
+than stage and verifier-strategy effects in the current number-swap results.
+For Claude under the direct verifier, plan-stage number-swap propagation is
+11.1\% for mild faults, 5.9\% for moderate faults, and 6.7\% for severe
+faults; solver-stage number-swap propagation is 0.0\%, 18.8\%, and 7.7\%
+for mild, moderate, and severe faults, respectively. The main takeaway is not
+a simple monotonic severity gradient, but that severity interacts with stage
+and downstream correction dynamics rather than determining propagation on its
+own.
 
-\textbf{What does the verifier contribute?} The verifier's causal contribution is clearest at the solver stage. Under direct prompting, removing the verifier raises propagation from 12.9\% in C2 to 27.3\% in D2 ($p_{\mathrm{holm}} = 0.0382$). By contrast, the plan-stage comparison is much smaller: propagation rises from 5.0\% in C1 to 8.6\% in D1 ($p_{\mathrm{holm}} = 0.4240$).
+\textbf{What does the verifier contribute?} The verifier's causal contribution
+is clearest at the solver stage. Under direct prompting, removing the verifier
+raises propagation from 12.9\% in C2 to 27.3\% in D2, and this contrast is
+significant after Holm correction ($p_{\mathrm{holm}} = 0.0382$). By contrast,
+the plan-stage comparison is much smaller: propagation rises from 5.0\% in C1
+to 8.6\% in D1, and the C1 versus D1 contrast is not significant
+($p_{\mathrm{holm}} = 0.4240$). These ablations show that the verifier matters
+most when the corruption is inserted late, after the solver has already
+produced a flawed final reasoning trace.
 
-\textbf{Which verifier catches what?} Verifier strategy strongly affects downstream outcomes. On Claude, solver-stage propagation under the direct verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and rubric prompting. Correction precision rises from 66.0\% under the direct verifier to 95.9\% under chain-of-thought and 100.0\% under rubric prompting. Table~\ref{tab:map} summarizes catch and correction rates across prompting strategies.
-
-\textbf{Cross-Model Generalization (Qwen 2.5 72B Instruct).} Cross-model replication on Qwen 2.5 72B Instruct confirms that these error propagation dynamics generalize beyond the primary model family. Under direct verifier prompting on Qwen, solver-stage injection (C2) yields an 11.2\% propagation rate compared to 4.0\% for plan-stage injection (C1), mirroring the stage boundary effect observed in Claude. Replaying identical Qwen traces under chain-of-thought and rubric verification reduces solver-stage propagation to 4.6\% and 4.7\%, respectively, while raising verifier correction precision to 98.0\% and 95.3\%.
+\textbf{Which verifier catches what?} Verifier strategy strongly affects
+downstream outcomes. On Claude, solver-stage propagation under the direct
+verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and
+rubric prompting. Correction precision rises from 66.0\% under the direct
+verifier to 95.9\% under chain-of-thought and 100.0\% under rubric prompting.
+Plan-stage propagation also improves, dropping from 5.0\% under the direct
+verifier to 1.4\% and 2.1\% under chain-of-thought and rubric prompting,
+respectively. The resulting strategy map shows that direct verification often
+detects faults but fails during repair, whereas chain-of-thought and rubric
+verifiers are substantially better at converting detection into correct final
+answers.
 
 \begin{figure}[t]\centering
 \includegraphics[width=0.85\linewidth]{fig2_acc.png}
