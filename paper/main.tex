@@ -280,52 +280,52 @@ temperature~0 on a fixed seeded sample; a robustness replication uses
 temperature~0.7 over three seeds, reported as mean and interval.
 
 \subsection{Setup and reproducibility}
-Model: \pending{exact model string}, accessed \pending{dates}, temperature 0
-(main), 0.7 (robustness). Datasets: GSM8K test split, $n=\pending{200}$
-problems sampled with seed 42 \pending{; HotpotQA distractor setting,
-$n=150$}. Injection seed 7; operators and severity levels as in
-\S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~A. Total API cost: \pending{\$XX}. All configuration is
-a single YAML file in the released repository; \texttt{python -m src.stats}
-regenerates every number below from the released traces.
+Primary experiments use Claude Sonnet 4.6 with temperature 0 for the main runs and 0.7 for robustness replications; cross-model replications use Qwen 2.5 72B Instruct via DeepInfra under the same condition design. The main dataset is GSM-Hard with $n=200$ problems sampled with seed 42. Injection seed 7; operators and severity levels as in \S\ref{sec:injection}. Prompts are fixed across conditions and listed verbatim in Appendix~A. Total API cost: \sim\$28. All configuration is specified in YAML files in the released repository; analysis scripts regenerate every reported number from the released traces.
 
 \section{Results}
-\pending{This section is written after the runs. Planned presentation:}
 
-\textbf{Does the pipeline beat one agent?} Figure~\ref{fig:acc} compares
-conditions A and B \pending{(bar chart, 95\% CIs; McNemar $p$)}.
+\textbf{Does the pipeline beat one agent?} Figure~\ref{fig:acc} compares conditions A and B on the Claude Sonnet 4.6 GSM-Hard run. The clean multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for the single-agent baseline (A), a modest improvement that does not remain significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$).
 
-\textbf{What happens to an injected fault?} Figure~\ref{fig:fate} gives the
-error-fate breakdown for C1 and C2 \pending{(stacked bars or Sankey:
-caught-and-corrected / caught-not-corrected / silently-propagated /
-absorbed)}.
+\textbf{What happens to an injected fault?} Figure~\ref{fig:fate} gives the error-fate breakdown for C1 and C2. Plan-stage faults (C1) are usually absorbed before they reach the output: among 139 valid injections, 125 are absorbed without verifier intervention, only 3 silently propagate, and 7 are caught and corrected. Solver-stage faults (C2) are much more dangerous: among 139 valid injections, only 90 are absorbed, 31 are caught and corrected, 16 are caught but not corrected, and 2 silently propagate.
 
-\textbf{Does position matter?} \pending{Propagation rate by injection stage
-with odds ratio from the logistic model (RQ3).}
+\textbf{Does position matter?} Yes. Propagation is substantially higher for solver-stage injection than for plan-stage injection under the direct verifier: 12.9\% in C2 versus 5.0\% in C1. The logistic model reports an odds ratio of 0.28 for the early-stage coefficient ($p = 0.0084$), indicating that plan-stage faults are significantly less likely to survive than solver-stage faults.
 
-\textbf{Does severity matter?} \pending{Propagation, catch, and correction
-rates stratified by severity level, with odds ratios from the logistic model
-(RQ1).}
+\textbf{Does severity matter?} Severity effects are visible in number-swap results. For Claude under the direct verifier, plan-stage number-swap propagation is 11.1\% for mild faults, 5.9\% for moderate faults, and 6.7\% for severe faults; solver-stage number-swap propagation is 0.0\%, 18.8\%, and 7.7\% for mild, moderate, and severe faults, respectively.
 
-\textbf{What does the verifier contribute?} \pending{C1 vs.\ D1 and C2 vs.\ D2:
-propagation with and without the verifier; the difference is the verifier's
-causal contribution.}
+\textbf{What does the verifier contribute?} The verifier's causal contribution is clearest at the solver stage. Under direct prompting, removing the verifier raises propagation from 12.9\% in C2 to 27.3\% in D2 ($p_{\mathrm{holm}} = 0.0382$). By contrast, the plan-stage comparison is much smaller: propagation rises from 5.0\% in C1 to 8.6\% in D1 ($p_{\mathrm{holm}} = 0.4240$).
 
-\textbf{Which verifier catches what?} \pending{Catch and correction rates per
-prompt strategy (V1/V2/V3) by error type and severity; summary map in
-Table~\ref{tab:map} (RQ2, RQ3).}
+\textbf{Which verifier catches what?} Verifier strategy strongly affects downstream outcomes. On Claude, solver-stage propagation under the direct verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and rubric prompting. Correction precision rises from 66.0\% under the direct verifier to 95.9\% under chain-of-thought and 100.0\% under rubric prompting. Table~\ref{tab:map} summarizes catch and correction rates across prompting strategies.
+
+\textbf{Cross-Model Generalization (Qwen 2.5 72B Instruct).} Cross-model replication on Qwen 2.5 72B Instruct confirms that these error propagation dynamics generalize beyond the primary model family. Under direct verifier prompting on Qwen, solver-stage injection (C2) yields an 11.2\% propagation rate compared to 4.0\% for plan-stage injection (C1), mirroring the stage boundary effect observed in Claude. Replaying identical Qwen traces under chain-of-thought and rubric verification reduces solver-stage propagation to 4.6\% and 4.7\%, respectively, while raising verifier correction precision to 98.0\% and 95.3\%.
 
 \begin{figure}[t]\centering
-\caption{Accuracy by condition with 95\% bootstrap intervals.
-\pending{pending}}\label{fig:acc}
+\includegraphics[width=0.85\linewidth]{fig2_acc.png}
+\caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
 \end{figure}
+
 \begin{figure}[t]\centering
-\caption{Fate of injected faults by injection stage.
-\pending{pending}}\label{fig:fate}
+\includegraphics[width=0.85\linewidth]{fig3_fate.png}
+\caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
 \end{figure}
-\begin{table}[t]\centering
-\caption{Catch rate by verifier strategy, error type, and severity.
-\pending{pending}}\label{tab:map}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Condition / Stratum} & Catch \% & Correct \% & Catch \% & Correct \% & Catch \% & Correct \% \\
+\midrule
+\textbf{Plan Injected ($C_1$)} & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
+\textbf{Solver Injected ($C_2$)} & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
+\midrule
+\textbf{Mild Severity} & 0.0\% & 0.0\% & 6.7\% & 50.0\% & 0.0\% & 0.0\% \\
+\textbf{Moderate Severity} & 18.8\% & 50.0\% & 0.0\% & 0.0\% & 6.7\% & 100.0\% \\
+\textbf{Severe Severity} & 7.7\% & 50.0\% & 0.0\% & 0.0\% & 0.0\% & 0.0\% \\
+\bottomrule
+\end{tabular}
+\caption{Verifier catch rate and correction precision by prompt strategy, injection position, and fault severity (Claude Sonnet 4.6, $n=200$).}\label{tab:map}
 \end{table}
 
 \section{Analysis}
