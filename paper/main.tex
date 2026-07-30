@@ -567,10 +567,13 @@ often unless a verifier catches and correctly repairs them. Verifier prompting
 strategy matters sharply: direct verifiers detect many failures but make more
 bad corrections, while chain-of-thought and rubric verifiers greatly improve
 correction precision and reduce final propagation. For practitioners, the main
-implication is that verification budget is most valuable at the solver-to-
-verifier boundary and that structured verifier prompts are preferable when
-correction quality matters, justifying their 24--31\% token cost premium.
-More broadly, the results suggest that the
+implication is that verification is significantly more critical for validating
+the solver's execution rather than the planner's plan. Because solvers naturally
+absorb many plan-stage errors, plan-level verification is largely redundant.
+By contrast, execution-stage errors propagate directly to the output unless a
+verifier is present at the solver boundary. When verification is deployed,
+structured verifier prompts are preferable when correction quality matters,
+justifying their 24--31\% token cost premium. More broadly, the results suggest that the
 reliability of agent pipelines depends not only on whether a verifier exists,
 but on where faults arise and how the verifier is instructed to reason about
 them.
