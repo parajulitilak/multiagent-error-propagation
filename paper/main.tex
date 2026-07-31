@@ -423,13 +423,11 @@ percentile-bootstrap intervals (10{,}000 resamples); rates carry Wilson
 score intervals. The effects of injection position, fault type, and verifier
 strategy on fault survival are estimated by logistic regression, reported as
 odds ratios. Because several contrasts are tested, $p$-values are
-Holm--Bonferroni corrected~\citep{dror2018hitchhiker}. Main runs use
-temperature~0 on a fixed seeded sample; robustness replications use
-temperature~0.7 over three seeds, reported as mean and interval.
+Holm--Bonferroni corrected~\citep{dror2018hitchhiker}. Runs use
+temperature~0 on a fixed seeded sample.
 
 \subsection{Setup and reproducibility}
-Main experiments use Claude Sonnet 4.6 with temperature 0 for the primary
-runs and 0.7 for robustness replications; cross-model replications use Qwen
+Main experiments use Claude Sonnet 4.6 with temperature 0; cross-model replications use Qwen
 2.5 72B Instruct under the same condition design. The main dataset is
 GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
 held fixed, with operators and severity levels as in
@@ -632,10 +630,7 @@ pre-registered contrast family~\citep{dror2018hitchhiker}. \emph{External
 validity}: results cover one primary reasoning dataset with objectively
 checkable answers and two model families; replication on both Claude Sonnet
 4.6 and Qwen 2.5 72B Instruct tests whether the observed propagation
-patterns depend on a single model. Robustness replications at temperature
-0.7 across three seeds are supported by the released harness, though the
-main conclusions in this paper are drawn from the deterministic primary
-runs. Conclusions are stated only where these checks agree.
+patterns depend on a single model. Conclusions are stated only where these checks agree.
 
 \begin{thebibliography}{99}
 
