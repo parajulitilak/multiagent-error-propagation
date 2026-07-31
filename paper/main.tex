@@ -432,10 +432,16 @@ Main experiments use Claude Sonnet 4.6 with temperature 0; cross-model replicati
 GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
 held fixed, with operators and severity levels as in
 \S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~A. Total API cost: $\sim$\$28. All configuration is specified through released YAML
-files in the repository, and the analysis scripts regenerate the reported
-condition-level, verifier-strategy, and model-comparison results from the
-released traces.
+verbatim in Appendix~A. Total API cost: $\sim$\$28. All configuration is
+specified through released YAML files in the repository:
+\texttt{configs/experiment.yaml} (Claude Direct baseline),
+\texttt{configs/experiment\_cot.yaml} (Claude Chain-of-Thought), and
+\texttt{configs/experiment\_rubric.yaml} (Claude Rubric), with corresponding files for the Qwen replication.
+The pipeline execution script is invoked as \texttt{python -m src.runner --config [file.yaml]}. 
+The analysis scripts regenerate the reported condition-level, verifier-strategy, and model-comparison results from the released traces via:
+\texttt{python -m src.stats} (general propagation and McNemar statistics),
+\texttt{python -m src.analyze\_rq2\_verifier\_strategies} (prompt strategy comparisons), and
+\texttt{python -m src.compare\_models} (cross-model comparison summaries).
 
 \section{Results}
 
