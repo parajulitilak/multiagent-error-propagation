@@ -409,12 +409,11 @@ of four fates: \emph{caught and corrected} (verifier rejects; final answer
 correct), \emph{caught but not corrected} (verifier rejects; final answer
 wrong), \emph{silently propagated} (verifier accepts; final answer wrong), or
 \emph{absorbed} (verifier accepts; final answer nevertheless correct, e.g.,
-the solver ignored the corrupted span). We report: accuracy per condition;
-\emph{propagation rate}, the fraction of valid injections whose final answer
-is wrong, restricted to problems condition B solved correctly so that new
-errors are attributable to the injection; \emph{catch rate} and
-\emph{correction rate} of the verifier, overall and stratified by error type,
-severity, and prompt strategy; and cost per solved problem in tokens.
+the solver ignored the corrupted span). We report:
+(i)~\emph{accuracy} per condition;
+(ii)~\emph{propagation rate}, defined as the fraction of valid injections that yield an incorrect final answer, calculated exclusively over the subset of problems correctly solved by the clean pipeline (Condition~B) to ensure that downstream errors are causally attributable to the injected fault;
+(iii)~\emph{catch rate} and \emph{correction rate} of the verifier, both overall and stratified by error type, severity, and prompting strategy; and
+(iv)~\emph{token cost}, measured as the average number of tokens consumed per solved problem.
 
 \subsection{Statistical analysis}
 All condition contrasts use McNemar's exact test on paired
