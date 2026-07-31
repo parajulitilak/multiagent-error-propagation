@@ -445,45 +445,28 @@ The analysis scripts regenerate the reported condition-level, verifier-strategy,
 
 \section{Results}
 
-\textbf{Does the clean pipeline beat the single agent?} 
-Figure~\ref{fig:acc} compares conditions A and B on the Claude Sonnet 4.6 GSM-Hard run. The clean multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for the single-agent baseline (A), a modest improvement that does not remain significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$). This establishes our baseline clean system performance.
+Before assessing the impact of fault injection, we validate our pipeline's baseline performance under clean conditions. Figure~\ref{fig:acc} compares conditions A (single-agent baseline) and B (clean multi-agent pipeline) on the Claude Sonnet 4.6 GSM-Hard run. The clean multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for the single-agent baseline (A), a modest improvement that does not remain significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$). This shows that while multi-agent coordination provides a small baseline boost, the downstream effects of fault injection and verifier ablation are far more pronounced.
 
-\subsection*{RQ1: Error Propagation and Position}
+\textbf{How often do injected faults propagate to the final output?}
+An injected fault can have one of several fates (Figure~\ref{fig:fate}). Overall, errors propagate and cause wrong final answers in 5.0\% of plan-injected runs (C1) and 12.9\% of solver-injected runs (C2) under direct verification. Without a verifier (ablated), the overall survival rate of errors rises substantially, causing final failures in 8.6\% of plan runs (D1) and 27.3\% of solver runs (D2). Moving to structured verification (CoT and Rubric) controls this propagation almost entirely, reducing the final propagation rate to a mere 1.4\% at both stages.
 
-\textbf{How often do injected faults propagate to the final output?} 
-Figure~\ref{fig:fate} gives the error-fate breakdown for C1 and C2. Under default direct verification, plan-stage faults (C1) propagate to the final output in only 5.0\% of cases (7 out of 139 valid injections), while solver-stage faults (C2) are more dangerous, propagating in 12.9\% of cases (18 out of 139). Overall, across all injected runs, faults survive to the final answer in 9.0\% of cases.
+\textbf{Does survival depend on whether the fault is introduced in planning or execution?}
+Yes, fault survival is heavily dependent on the injection stage. Propagation is significantly higher for solver-stage injection than for plan-stage injection under the direct verifier (12.9\% in C2 versus 5.0\% in C1). The logistic regression model reports an odds ratio of 0.28 for the early-stage coefficient ($p = 0.0084$), confirming that plan-stage faults are significantly less likely to survive to the final output. Qualitatively, solvers frequently correct or re-derive corrupted plans on their own, whereas solver-stage errors sit directly at the final output boundary where the verifier is the only line of defense.
 
-\textbf{Does survival depend on whether the fault is introduced in planning or execution?} 
-Yes. Solver-stage execution faults propagate at more than double the rate of plan-stage faults (12.9\% in C2 vs.\ 5.0\% in C1). The logistic regression model reports an odds ratio of 0.28 for the early-stage coefficient ($p = 0.0084$), confirming that plan-stage faults are significantly less likely to survive. Qualitative trace analysis shows that the solver often naturally re-derives or ignores corrupted plans, whereas corrupted solver outputs sit directly at the output boundary, making verification the sole line of defense.
+\textbf{How does error severity affect downstream propagation?}
+Error severity (mild, moderate, severe) has a non-monotonic effect on propagation. For Claude under the direct verifier, plan-stage number-swap propagation is 11.1\% for mild, 5.9\% for moderate, and 6.7\% for severe faults. At the solver stage, propagation is 0.0\% for mild, 18.8\% for moderate, and 7.7\% for severe faults. This shows that moderate errors at the execution stage propagate most frequently, while mild errors are completely absorbed or corrected.
 
-\subsection*{RQ2: Severity and Sensitivity}
+\textbf{Do verifiers only catch severe, fatal errors, or are they sensitive to subtle slips?}
+Our data reveals a counterintuitive finding: verifiers are highly sensitive to subtle slips, but they actually struggle to catch severe faults. Under direct verification at the solver stage (Table~\ref{tab:map}), the verifier catches 35.3\% of mild number swaps and 12.5\% of moderate swaps, but the catch rate drops to just 7.7\% for severe swaps. This same pattern holds under rubric verification, where the catch rate is 26.7\% for mild, 40.0\% for moderate, and only 6.7\% for severe swaps. Severe errors heavily distort the numerical context of the solution, confusing the verifier's checks, whereas mild slips are cleaner discrepancies that are easier to flag.
 
-\textbf{How does error severity affect downstream propagation?} 
-Severity has a non-monotonic effect on fault survival. Under direct verification, plan-stage number-swap propagation is 11.1\% for mild, 5.9\% for moderate, and 6.7\% for severe faults. At the solver stage, propagation is 0.0\% for mild, 18.8\% for moderate, and 7.7\% for severe faults. Rather than a simple linear severity gradient, propagation is shaped by the interaction between the injection stage and downstream correction dynamics.
+\textbf{How do prompting strategies compare in catch rate, verifier correction precision, and propagation control?}
+Prompting strategy strongly affects verifier success. On Claude, solver-stage propagation under the direct verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and rubric prompting. This is primarily driven by correction precision: the direct verifier frequently detects errors but introduces new math slips during repair (achieving only 66.0\% correction precision). In contrast, chain-of-thought and rubric prompting increase correction precision to 95.9\% and 100.0\%, respectively, converting detections into correct final answers.
 
-\textbf{Do verifiers only catch severe, fatal errors, or are they sensitive to subtle slips?} 
-Our results show that verifiers are highly sensitive to subtle slips. At the solver stage, the direct verifier achieves a catch rate of 35.3\% on mild number swaps and 12.5\% on moderate swaps, but only 7.7\% on severe swaps. Under rubric verification, catch rates are 26.7\% for mild, 40.0\% for moderate, and 6.7\% for severe swaps. This demonstrates that verifiers are not simple threshold detectors; severe errors can distort the reasoning context so heavily that they confuse the verifier's judgment, whereas mild slips are cleaner to isolate and flag.
+\textbf{What is the token cost overhead associated with more structured prompting?}
+Multi-agent execution carries a substantial token overhead. The single-agent baseline (A) requires only 526 tokens per solved problem on Claude Sonnet 4.6. Moving to the clean multi-agent pipeline (B) increases this to 1,616 tokens per solved problem, a 3.1$\times$ expansion. Under fault-injected conditions (C2), verifier strategies introduce different cost profiles: direct verification averages 1,145 tokens per problem (1,892 per solved problem); chain-of-thought verification increases average token usage to 1,419 tokens per problem (a 23.9\% increase); and the rubric strategy is the most expensive at 1,503 tokens per problem (a 31.3\% increase). These measurements highlight a trade-off: while chain-of-thought and rubric prompting reduce solver-stage fault propagation from 12.9\% to 1.4\%, they require 24--31\% more tokens than direct verification.
 
-\subsection*{RQ3: Prompting Strategies and Efficiency}
-
-\textbf{How do prompting strategies compare in catch rate, correction precision, and propagation control?} 
-Prompt strategy strongly affects downstream outcomes. On Claude, solver-stage propagation under the direct verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and rubric prompting. Correction precision (the proportion of verifier flags that result in correct final repairs) rises from 66.0\% under the direct verifier to 95.9\% under chain-of-thought and 100.0\% under rubric prompting (Table~\ref{tab:map}). Plan-stage propagation also improves, dropping from 5.0\% under direct to 1.4\% (CoT) and 2.1\% (rubric). Structured prompting thus converts detection into precise repairs.
-
-\textbf{What is the token cost overhead associated with more structured prompting?} 
-Multi-agent execution carries a substantial token overhead. The single-agent baseline (A) requires only 526 tokens per solved problem. The clean pipeline (B) increases this to 1,616 tokens ($3.1\times$). Under fault-injected solver conditions (C2), verifier strategies introduce different cost profiles: direct verification averages 1,145 tokens per problem (1,892 per solved problem); chain-of-thought verification increases average token usage to 1,419 tokens per problem (a 23.9\% increase); and the rubric strategy is the most expensive at 1,503 tokens per problem (a 31.3\% increase). While CoT and rubric reduce solver-stage fault propagation from 12.9\% to 1.4\%, they require 24--31\% more tokens than direct verification.
-
-\subsection*{RQ4: Causal Map and Error Types}
-
-\textbf{How do verifier presence and prompt strategy interact with specific error types?} 
-The verifier's impact is highly sensitive to the error type. 
-\begin{itemize}
-    \item \textbf{Semantic logic errors} are highly visible: the direct verifier catches 82.6\% at the solver stage (with 94.7\% correction precision), and CoT catches 88.9\% (97.5\% precision).
-    \item \textbf{Number swaps} are moderately visible: the direct verifier catches 19.6\% at the solver stage, and rubric catches 24.4\% (both achieving 100\% correction precision).
-    \item \textbf{Operation flips} represent a critical blind spot: catch rates are 0.0\% under both direct and CoT, and only 2.1\% under rubric prompting. Reversing an arithmetic sign is a structural mathematical error that verifiers fail to detect without full, independent recalculation.
-\end{itemize}
-
-\textbf{How does the presence of a verifier causally impact error propagation (Ablation)?} 
-Removing the verifier entirely (ablation) reveals its causal protection. At the solver stage, removing the verifier increases propagation from 12.9\% (C2) to 27.3\% (D2), a significant contrast ($p_{\mathrm{holm}} = 0.0382$). At the plan stage, the impact is non-significant: propagation rises from 5.0\% (C1) to 8.6\% (D1) ($p_{\mathrm{holm}} = 0.4240$). The verifier provides vital defense for late-stage execution errors, but is largely redundant for plan-stage errors due to natural solver absorption.
+\textbf{How do verifier presence and prompt strategy interact with specific error types?}
+The interaction between error types and verifier prompting reveals a significant blind spot. Verifiers are highly sensitive to \emph{semantic logic errors} (which corrupt reasoning logic without changing numerals). At the solver stage, direct, CoT, and rubric verifiers catch 82.6\%, 88.9\%, and 83.0\% of semantic errors, respectively. Removing the verifier (ablation) causes propagation for semantic errors to surge to 80.0\% in D2, proving the verifier's critical causal role. For \emph{number swaps}, catch rates are moderate (19.6\% to 24.4\%) but correction precision is flawless (100.0\% across all strategies). However, all verifiers are almost completely blind to \emph{operation flips} (reversing an operator, e.g. addition to subtraction). The catch rate for operation flips is 0.0\% under both direct and CoT prompting, and only 2.1\% under the rubric strategy. Because operation flips preserve mathematical syntax but reverse structural logic, verifiers fail to detect them without fully executing the math.
 
 \begin{figure}[t]\centering
 \includegraphics[width=0.85\linewidth]{fig2_acc.png}
