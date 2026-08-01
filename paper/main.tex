@@ -454,6 +454,7 @@ The analysis scripts regenerate the reported condition-level, verifier-strategy,
 \toprule
 \textbf{Cond.} & \textbf{Description} & \textbf{Accuracy} & \textbf{95\% CI} & \textbf{Prop. Rate} & \textbf{$p_{\mathrm{holm}}$ vs B} \\
 \midrule
+\multicolumn{6}{l}{\textbf{Claude Sonnet 4.6}} \\
 A  & Single-agent baseline          & 65.5\% & [59.0, 72.0] & ---   & 0.0645 \\
 B  & Clean pipeline                 & 69.5\% & [63.0, 76.0] & ---   & ---    \\
 C1 & Plan injected + verifier       & 66.5\% & [60.0, 73.0] & 5.0\% & 0.1406 \\
@@ -461,10 +462,19 @@ C2 & Solver injected + verifier     & 60.5\% & [54.0, 67.0] & 12.9\% & ---   \\
 D1 & Plan injected, no verifier     & 64.5\% & [58.0, 71.0] & 8.6\%  & ---   \\
 D2 & Solver injected, no verifier   & 51.5\% & [44.5, 58.5] & 27.3\% & ---   \\
 \midrule
-\multicolumn{4}{l}{\textit{Verifier ablation (C vs D), Holm-corrected McNemar:}} & \multicolumn{2}{l}{C1:D1 $p=0.4240$;\; C2:D2 $p=0.0382$} \\
+\multicolumn{6}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+A  & Single-agent baseline          & 62.5\% & [56.0, 69.5] & ---   & 1.0000 \\
+B  & Clean pipeline                 & 63.0\% & [56.5, 69.5] & ---   & ---    \\
+C1 & Plan injected + verifier       & 61.5\% & [55.0, 68.0] & 5.6\% & 1.0000 \\
+C2 & Solver injected + verifier     & 56.0\% & [49.0, 63.0] & 15.9\% & ---   \\
+D1 & Plan injected, no verifier     & 61.0\% & [54.5, 67.5] & 8.7\%  & ---   \\
+D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
+\midrule
+\multicolumn{6}{l}{\textit{Verifier ablation (C vs D), Holm-corrected McNemar:}} \\
+\multicolumn{6}{l}{Claude C1:D1 $p=0.4240$; C2:D2 $p=0.0382$ \qquad Qwen C1:D1 $p=1.0000$; C2:D2 $p=0.5406$} \\
 \bottomrule
 \end{tabular}
-\caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6, GSM-Hard $n=200$). Propagation rate is computed over the 139 problems correctly solved by the clean pipeline (B). $p_{\mathrm{holm}}$ for C2:D2 reflects the causal verifier contribution at the solver stage.}\label{tab:conditions_results}
+\caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Propagation rate is computed over the problems correctly solved by the clean pipeline (B).}\label{tab:conditions_results}
 \end{table}
 
 % ---------------------------------------------------------------
@@ -494,19 +504,26 @@ D2 & Solver injected, no verifier   & 51.5\% & [44.5, 58.5] & 27.3\% & ---   \\
 \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
 \textbf{Stage} & \textbf{Metric} & Catch\% & Corr.\% & Catch\% & Corr.\% & Catch\% & Corr.\% \\
 \midrule
+\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
 \textbf{Plan ($C_1$)} & Overall & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
 & Prop. Rate & \multicolumn{2}{c}{5.0\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{2.1\%} \\
-\midrule
 \textbf{Solver ($C_2$)} & Overall & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
 & Prop. Rate & \multicolumn{2}{c}{12.9\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{1.4\%} \\
+\quad \textit{Mild Severity} & Prop. Rate & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{6.7\%}  & \multicolumn{2}{c}{0.0\%}  \\
+\quad \textit{Moderate Severity} & Prop. Rate & \multicolumn{2}{c}{18.8\%} & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{6.7\%}  \\
+\quad \textit{Severe Severity} & Prop. Rate & \multicolumn{2}{c}{7.7\%}  & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{0.0\%}  \\
 \midrule
-\textbf{Severity (Solver, number swap only)} & & & & & & & \\
-Mild   & Prop. Rate & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{6.7\%}  & \multicolumn{2}{c}{0.0\%}  \\
-Moderate & Prop. Rate & \multicolumn{2}{c}{18.8\%} & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{6.7\%}  \\
-Severe & Prop. Rate & \multicolumn{2}{c}{7.7\%}  & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{0.0\%}  \\
+\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+\textbf{Plan ($C_1$)} & Overall & 8.8\% & 54.5\% & 5.4\% & 57.1\% & 2.4\% & 33.3\% \\
+& Prop. Rate & \multicolumn{2}{c}{4.0\%} & \multicolumn{2}{c}{3.1\%} & \multicolumn{2}{c}{3.9\%} \\
+\textbf{Solver ($C_2$)} & Overall & 62.4\% & 85.9\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
+& Prop. Rate & \multicolumn{2}{c}{11.2\%} & \multicolumn{2}{c}{4.6\%} & \multicolumn{2}{c}{4.7\%} \\
+\quad \textit{Mild Severity} & Prop. Rate & \multicolumn{2}{c}{9.1\%}  & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{0.0\%}  \\
+\quad \textit{Moderate Severity} & Prop. Rate & \multicolumn{2}{c}{20.0\%} & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{0.0\%}  \\
+\quad \textit{Severe Severity} & Prop. Rate & \multicolumn{2}{c}{22.2\%} & \multicolumn{2}{c}{9.1\%}  & \multicolumn{2}{c}{0.0\%}  \\
 \bottomrule
 \end{tabular}
-\caption{Verifier catch rate, correction precision, and propagation rate by prompt strategy, injection stage, and fault severity (Claude Sonnet 4.6, $n=200$). Severity rows cover number-swap injections only.}\label{tab:strategy}
+\caption{Verifier catch rate, correction precision, and propagation rate by prompt strategy, injection stage, and fault severity (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$). Severity rows cover number-swap injections only.}\label{tab:strategy}
 \end{table}
 
 % ---------------------------------------------------------------
@@ -518,15 +535,22 @@ Severe & Prop. Rate & \multicolumn{2}{c}{7.7\%}  & \multicolumn{2}{c}{0.0\%}  & 
 \toprule
 \textbf{Condition} & \textbf{Direct} & \textbf{CoT} & \textbf{Rubric} & \textbf{vs Direct} \\
 \midrule
+\multicolumn{5}{l}{\textbf{Claude Sonnet 4.6}} \\
 Single-agent (A)          & \multicolumn{3}{c}{526 tok/solved} & --- \\
 Clean pipeline (B)        & \multicolumn{3}{c}{1,616 tok/solved} & $+3.1\times$ vs A \\
+Avg C2 tok/problem        & 1,145 & 1,419 & 1,503 & CoT $+23.9\%$;\; Rubric $+31.3\%$ \\
+C2 tok/solved problem     & 1,892 & 2,027 & 2,163 & CoT $+7.1\%$;\; Rubric $+14.3\%$ \\
+C2 Verifier stage only    & 103,378 & 157,191 & 173,825 & CoT $+52.1\%$;\; Rubric $+68.1\%$ \\
 \midrule
-Avg tok/problem (C2)      & 1,145 & 1,419 & 1,503 & CoT $+23.9\%$;\; Rubric $+31.3\%$ \\
-Tok/solved problem (C2)   & 1,892 & 2,027 & 2,163 & CoT $+7.1\%$;\; Rubric $+14.3\%$ \\
-Verifier tok only (C2)    & 103,378 & 157,191 & 173,825 & CoT $+52.1\%$;\; Rubric $+68.1\%$ \\
+\multicolumn{5}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+Single-agent (A)          & \multicolumn{3}{c}{737 tok/solved} & --- \\
+Clean pipeline (B)        & \multicolumn{3}{c}{1,623 tok/solved} & $+2.2\times$ vs A \\
+Avg C2 tok/problem        & 1,063 & 1,460 & 1,383 & CoT $+37.4\%$;\; Rubric $+30.1\%$ \\
+C2 tok/solved problem     & 1,817 & 2,317 & 2,230 & CoT $+27.5\%$;\; Rubric $+22.7\%$ \\
+C2 Verifier stage only    & 84,165 & 164,977 & 148,567 & CoT $+96.0\%$;\; Rubric $+76.5\%$ \\
 \bottomrule
 \end{tabular}
-\caption{Token cost by verifier prompting strategy under solver-injected condition C2 (Claude Sonnet 4.6, GSM-Hard $n=200$). Verifier-only tokens isolate the prompting overhead.}\label{tab:cost}
+\caption{Token cost by verifier prompting strategy under solver-injected condition C2 (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Verifier-only tokens isolate the prompting overhead.}\label{tab:cost}
 \end{table}
 
 % ---------------------------------------------------------------
@@ -540,17 +564,24 @@ Verifier tok only (C2)    & 103,378 & 157,191 & 173,825 & CoT $+52.1\%$;\; Rubri
 \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
 \textbf{Error Type} & \textbf{Stage} & Catch\% & Prop.\% & Catch\% & Prop.\% & Catch\% & Prop.\% \\
 \midrule
+\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
 Number swap    & Plan   & 4.9\%  & 2.4\%  & 5.3\%  & 0.0\%  & 4.1\%  & 0.0\%  \\
 Number swap    & Solver & 19.6\% & 4.3\%  & 19.6\% & 0.0\%  & 24.4\% & 2.2\%  \\
-\midrule
 Operation flip & Plan   & 0.0\%  & 2.6\%  & 0.0\%  & 2.9\%  & 0.0\%  & 4.8\%  \\
 Operation flip & Solver & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  & 2.1\%  & 2.1\%  \\
-\midrule
 Semantic logic & Plan   & 15.0\% & 3.3\%  & 17.0\% & 2.1\%  & 14.3\% & 2.0\%  \\
 Semantic logic & Solver & 82.6\% & 4.3\%  & 88.9\% & 2.2\%  & 83.0\% & 0.0\%  \\
+\midrule
+\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+Number swap    & Plan   & 8.6\%  & 8.6\%  & 4.5\%  & 2.3\%  & 4.3\%  & 4.3\%  \\
+Number swap    & Solver & 86.4\% & 29.5\% & 23.5\% & 2.9\%  & 80.0\% & 0.0\%  \\
+Operation flip & Plan   & 4.9\%  & 0.0\%  & 2.6\%  & 0.0\%  & 2.8\%  & 2.8\%  \\
+Operation flip & Solver & 13.2\% & 5.3\%  & 0.0\%  & 0.0\%  & 2.2\%  & 0.0\%  \\
+Semantic logic & Plan   & 14.0\% & 8.0\%  & 8.5\%  & 6.4\%  & 0.0\%  & 4.4\%  \\
+Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \\
 \bottomrule
 \end{tabular}
-\caption{Verifier catch rate and propagation rate by error type, injection stage, and prompt strategy (Claude Sonnet 4.6, $n=200$). Operation flip at the solver stage has a 0\% catch rate under Direct and CoT, revealing a systematic blind spot.}\label{tab:errortype}
+\caption{Verifier catch rate and propagation rate by error type, injection stage, and prompt strategy (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:errortype}
 \end{table}
 
 % ---------------------------------------------------------------
@@ -563,36 +594,35 @@ multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for
 the single-agent baseline (A), a modest improvement that does not remain
 significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$). The result
 suggests that decomposition and verification can improve end-to-end
-performance, but the gain is smaller than the downstream effects of fault
-injection and verifier ablation.
+performance, but the gain is small. This pattern replicates on Qwen 2.5 72B Instruct (Table~\ref{tab:conditions_results}), where clean multi-agent execution (B) yields no statistically significant improvement over the single-agent baseline (A) (63.0\% vs. 62.5\%, $p_{\mathrm{holm}} = 1.0$), suggesting that baseline multi-agent performance gains are marginal across different model families.
 
 \subsection*{RQ1: Error Propagation \& Position}
 
 \textbf{How often do injected faults propagate to the final output?}
 Figure~\ref{fig:fate} gives the
-error-fate breakdown for C1 and C2. Plan-stage faults (C1) are usually
+error-fate breakdown for C1 and C2 on Claude. Plan-stage faults (C1) are usually
 absorbed before they reach the output: among 139 valid injections, 125 are
 absorbed without verifier intervention, only 3 silently propagate, and 7 are
 caught and corrected. Solver-stage faults (C2) are much more dangerous:
 among 139 valid injections, only 90 are absorbed, 31 are caught and corrected,
 16 are caught but not corrected, and 2 silently propagate. In other words,
 the verifier becomes far more active when the corruption is inserted at the
-solver stage.
+solver stage. Under the Direct strategy, Qwen 2.5 72B Instruct shows a similar stage-wise risk profile, with plan-stage propagation at 5.6\% (7/126) and solver-stage propagation rising to 15.9\% (20/126) (Table~\ref{tab:conditions_results}).
 
-\textbf{Does survival rate differ when errors are introduced in the planning stage versus the execution stage?}
+\textbf{Does this survival rate differ when errors are introduced in the planning stage (Decomposer) versus the execution stage (Solver)?}
 Yes. As shown in Table~\ref{tab:conditions_results}, propagation is substantially higher for
 solver-stage injection than for plan-stage injection under the direct verifier:
-12.9\% in C2 versus 5.0\% in C1. The logistic model reports an odds ratio of
+12.9\% in C2 versus 5.0\% in C1 for Claude. The logistic model reports an odds ratio of
 0.28 for the early-stage coefficient ($p = 0.0084$), indicating that
 plan-stage faults are significantly less likely to survive than solver-stage
 faults. This pattern is consistent with the qualitative trace evidence: the
 solver often re-derives or corrects corrupted plans, whereas corrupted solver
 outputs sit directly at the boundary where the verifier must detect and repair
-them.
+them. Qwen replicates this difference with solver-stage propagation at 15.9\% vs. 5.6\% at the plan stage, and a corresponding odds ratio of 0.32 ($p = 0.0164$), showing that stage boundaries act as consistent semantic filters across both model families.
 
 \subsection*{RQ2: Severity \& Sensitivity}
 
-\textbf{How does error severity affect downstream propagation?}
+\textbf{How does error severity (mild, moderate, severe) affect downstream propagation?}
 Severity effects are visible but are weaker
 than stage and verifier-strategy effects in the current number-swap results.
 As shown in Table~\ref{tab:strategy}, for Claude under the direct verifier, solver-stage number-swap propagation is
@@ -600,21 +630,21 @@ As shown in Table~\ref{tab:strategy}, for Claude under the direct verifier, solv
 for mild, moderate, and severe faults, respectively. The main takeaway is not
 a simple monotonic severity gradient, but that severity interacts with stage
 and downstream correction dynamics rather than determining propagation on its
-own.
+own. Under Qwen's Direct verifier (Table~\ref{tab:strategy}), propagation rates are 9.1\% for mild, 20.0\% for moderate, and 22.2\% for severe faults, showing a more monotonic propagation profile that is nevertheless suppressed at the mild end.
 
-\textbf{Do verifiers only catch severe errors, or are they sensitive to subtle numerical slips?}
+\textbf{Do verifiers only catch severe, fatal errors, or are they sensitive to subtle numerical slips?}
 Under the direct verifier at the solver stage, mild number-swap faults (subtle numerical slips)
 show 0.0\% propagation --- identical to or lower than severe faults (7.7\%) and well below
-moderate faults (18.8\%) (Table~\ref{tab:strategy}). This non-monotonic pattern indicates
+moderate faults (18.8\%) for Claude (Table~\ref{tab:strategy}). This non-monotonic pattern indicates
 that verifiers are not only sensitive to large, obvious errors: mild faults are caught or absorbed
 at a rate comparable to severe ones. The result is consistent across CoT and Rubric strategies,
 where mild, moderate, and severe solver-stage propagation all fall to 0.0\% or near-zero,
 confirming that structured verifiers are sensitive to subtle numerical slips rather than responding
-only to gross magnitude errors.
+only to gross magnitude errors. For Qwen, mild propagation drops to 0.0\% under both CoT and Rubric, moderate propagation drops to 0.0\% under both, and severe propagation falls to 9.1\% (CoT) and 0.0\% (Rubric) (Table~\ref{tab:strategy}), confirming that cross-model verifier sensitivity generalizes to small numeric changes.
 
 \subsection*{RQ3: Prompting Strategies \& Efficiency}
 
-\textbf{How do Direct, CoT, and Rubric strategies compare in catch rate, correction precision, and propagation control?}
+\textbf{How do Direct, Chain-of-Thought (CoT), and Rubric prompting strategies compare in catch rate, verifier correction precision, and propagation control?}
 Table~\ref{tab:strategy} shows that verifier strategy strongly affects
 downstream outcomes. On Claude, solver-stage propagation under the direct
 verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and
@@ -625,43 +655,31 @@ verifier to 1.4\% and 2.1\% under chain-of-thought and rubric prompting,
 respectively. The resulting strategy map shows that direct verification often
 detects faults but fails during repair, whereas chain-of-thought and rubric
 verifiers are substantially better at converting detection into correct final
-answers.
+answers. Qwen replicates these trends: solver-stage propagation falls from 11.2\% under Direct to 4.6\% (CoT) and 4.7\% (Rubric), while correction precision rises from 85.9\% under Direct to 98.0\% (CoT) and 95.3\% (Rubric).
 
 \textbf{What is the token cost overhead associated with more structured prompting?}
-Table~\ref{tab:cost} shows that multi-agent execution carries a substantial token overhead. The single-agent baseline (A) requires only 526 tokens per solved problem on Claude Sonnet 4.6. Moving to the clean multi-agent pipeline (B) increases this to 1,616 tokens per solved problem, a 3.1$\times$ expansion. Under fault-injected conditions (C2), verifier strategies introduce different cost profiles: direct verification averages 1,145 tokens per problem; chain-of-thought increases this by 23.9\%; and the rubric strategy by 31.3\%. These measurements highlight a clear trade-off between reliability and budget: while chain-of-thought and rubric prompting reduce solver-stage fault propagation from 12.9\% to 1.4\%, they require 24--31\% more tokens than direct verification.
+Table~\ref{tab:cost} shows that multi-agent execution carries a substantial token overhead. The single-agent baseline (A) requires only 526 tokens per solved problem on Claude Sonnet 4.6. Moving to the clean multi-agent pipeline (B) increases this to 1,616 tokens per solved problem, a 3.1$\times$ expansion. Under fault-injected conditions (C2), verifier strategies introduce different cost profiles: direct verification averages 1,145 tokens per problem; chain-of-thought increases this by 23.9\%; and the rubric strategy by 31.3\%. These measurements highlight a clear trade-off between reliability and budget: while chain-of-thought and rubric prompting reduce solver-stage fault propagation from 12.9\% to 1.4\%, they require 24--31\% more tokens than direct verification. For Qwen, a similar trade-off holds: single-agent execution (A) is highly efficient at 737 tokens/solved, whereas clean multi-agent execution (B) requires 1,623 tokens/solved ($+2.2\times$), and verifier strategies under C2 represent a 30\% to 37\% premium over Direct (CoT $+37.4\%$, Rubric $+30.1\%$).
 
-\textbf{Does the relative advantage of each strategy vary depending on fault type and severity?}
+\textbf{Does the relative advantage of each prompting strategy vary depending on fault type and severity?}
 Table~\ref{tab:errortype} shows that strategy advantage is not uniform across fault types.
 Operation flip errors represent a near-universal blind spot: catch rates are 0.0\% under both
-Direct and CoT at both injection stages, with Rubric achieving only 2.1\% at the solver stage.
+Direct and CoT at both injection stages, with Rubric achieving only 2.1\% at the solver stage on Claude.
 By contrast, semantic logic errors are detected by all three strategies at high rates
 (82.6\%--88.9\% at the solver stage), with CoT achieving the highest catch rate (88.9\%) and
 Rubric achieving perfect correction precision (100.0\%). Number swaps fall between these
 extremes. On the severity dimension, CoT and Rubric largely eliminate the moderate-severity
 propagation gap left by Direct (Direct: 18.8\%, CoT: 0.0\%, Rubric: 6.7\% at the solver stage),
 suggesting that structured prompting confers the largest relative advantage against moderate
-numerical errors.
+numerical errors. Qwen shares this operation flip blind spot (max 13.2\% catch rate under Direct and 0.0\% under CoT) and shows similar high detection of semantic logic errors (73.8\%--82.4\%), with CoT and Rubric reducing moderate and severe number-swap propagation to 0.0\% (Table~\ref{tab:strategy}).
 
 \subsection*{RQ4: Causal Map \& Error Types}
 
-\textbf{How do verifier presence (ablation) and prompt strategy interact with specific error types?}
+\textbf{How do verifier presence (ablation) and prompt strategy interact with specific error types (number swaps, operation flips, and semantic logic errors)?}
 The verifier's causal contribution
 is clearest at the solver stage. Under direct prompting, removing the verifier
 raises propagation from 12.9\% in C2 to 27.3\% in D2 (Table~\ref{tab:conditions_results}), and this contrast is
 significant after Holm correction ($p_{\mathrm{holm}} = 0.0382$). By contrast,
-the plan-stage comparison is much smaller: propagation rises from 5.0\% in C1
-to 8.6\% in D1, and the C1 versus D1 contrast is not significant
-($p_{\mathrm{holm}} = 0.4240$). These ablations show that the verifier matters
-most when the corruption is inserted late, after the solver has already
-produced a flawed final reasoning trace. This contribution, however, is not
-uniform across error types (Table~\ref{tab:errortype}). For semantic logic errors at
-the solver stage, verifier removal raises propagation from 4.3\% to 80.0\% --- a
-75.7 percentage-point difference --- making semantic logic errors the error type most
-critically dependent on the verifier's presence. For number swaps, the verifier reduces
-solver-stage propagation from 12.2\% to 4.3\% ($+$7.9pp). For operation flips, the verifier
-has near-zero effect at both stages (0.0\% propagation with and without it), indicating that
-operation flips are neither caught by the verifier nor propagated in the first place --- they
-are absorbed by the solver regardless of verifier presence.
+the plan-stage comparison is much smaller: propagation rises from 5.0\% in C1 to 8.6\% in D1, and the C1 versus D1 contrast is not significant ($p_{\mathrm{holm}} = 0.4240$). These ablations show that the verifier matters most when the corruption is inserted late, after the solver has already produced a flawed final reasoning trace. This contribution, however, is not uniform across error types (Table~\ref{tab:errortype}). For semantic logic errors at the solver stage, verifier removal raises propagation from 4.3\% to 80.0\% --- a 75.7 percentage-point difference --- making semantic logic errors the error type most critically dependent on the verifier's presence. For number swaps, the verifier reduces solver-stage propagation from 12.2\% to 4.3\% ($+$7.9pp). For operation flips, the verifier has near-zero effect at both stages (0.0\% propagation with and without it), indicating that operation flips are neither caught by the verifier nor propagated in the first place --- they are absorbed by the solver regardless of verifier presence. Qwen displays a similar causal trend: verifier presence cuts solver-stage semantic logic propagation from 77.8\% (D2) to 11.4\% (C2) (Table~\ref{tab:errortype}). However, due to higher variance and slightly smaller sample sizes of valid injections, Qwen's overall C2 vs. D2 contrast is not statistically significant after Holm correction ($p_{\mathrm{holm}} = 0.5406$).
 
 \textbf{Which verifier configuration is best suited for catching each type of reasoning failure?}
 The error-type map in Table~\ref{tab:errortype} points to clear configuration recommendations.
@@ -670,9 +688,7 @@ For semantic logic errors, Rubric achieves the lowest solver-stage propagation (
 highest correction precision (100.0\%). Operation flips present a systematic challenge: no
 strategy achieves meaningful catch rates, with all three verifiers failing to detect the majority
 of operation flip injections at either stage. These patterns are consistent across both Claude
-Sonnet 4.6 and Qwen 2.5 72B Instruct, with Qwen showing similar blind spots for operation flips
-and similar CoT/Rubric advantages for semantic logic errors, confirming that configuration
-recommendations generalize beyond a single model family.
+Sonnet 4.6 and Qwen 2.5 72B Instruct, with Qwen showing similar blind spots for operation flips. However, on Qwen, Rubric achieves the lowest propagation for number swaps (0.0\% vs. 2.9\% for CoT), and CoT achieves the lowest propagation for semantic logic errors (9.8\% vs. 14.3\% for Rubric), illustrating minor model-specific variations in optimal verifier configurations.
 
 \section{Analysis}
 The traces reveal three recurring mechanisms. First, many plan-stage faults are
