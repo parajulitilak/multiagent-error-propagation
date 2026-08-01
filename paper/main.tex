@@ -197,7 +197,7 @@ Let $x$ be a problem. The pipeline computes a plan $d = D(x)$, a solution
 $s = S(x, d)$, and a verdict $v = V(x, s)$; the final answer $\hat{y}$ is
 extracted from $s$ if the verifier accepts, or from the verifier's correction
 if it rejects. Each stage is a separate LLM call with its own role prompt
-(Appendix~A); the only information passed between stages is the text of the
+(Appendix~\ref{sec:appendix_prompts}); the only information passed between stages is the text of the
 preceding artifact, mirroring common framework defaults. A single-agent
 baseline computes $\hat{y}$ from one call on $x$ alone.
 
@@ -433,7 +433,7 @@ Main experiments use Claude Sonnet 4.6 with temperature 0; cross-model replicati
 GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
 held fixed, with operators and severity levels as in
 \S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~A. Total API cost: $\sim$\$28. All configuration is
+verbatim in Appendix~\ref{sec:appendix_prompts}. Total API cost: $\sim$\$28. All configuration is
 specified through released YAML files in the repository:
 \texttt{configs/experiment.yaml} (Claude Direct baseline),
 \texttt{configs/experiment\_cot.yaml} (Claude Chain-of-Thought), and
@@ -465,14 +465,14 @@ D2 & Solver injected, no verifier   & 51.5\% & [44.5, 58.5] & 27.3\% & ---   \\
 \midrule
 \multicolumn{6}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
 A  & Single-agent baseline          & 62.5\% & [56.0, 69.5] & ---   & 1.0000 \\
-B  & Clean pipeline                 & 63.0\% & [56.5, 69.5] & ---   & ---    \\
-C1 & Plan injected + verifier       & 61.5\% & [55.0, 68.0] & 5.6\% & 1.0000 \\
-C2 & Solver injected + verifier     & 56.0\% & [49.0, 63.0] & 15.9\% & ---   \\
+B  & Clean pipeline                 & 62.5\% & [56.0, 69.0] & ---   & ---    \\
+C1 & Plan injected + verifier       & 62.5\% & [56.0, 69.5] & 4.0\% & 1.0000 \\
+C2 & Solver injected + verifier     & 58.5\% & [51.5, 65.0] & 11.2\% & ---   \\
 D1 & Plan injected, no verifier     & 61.0\% & [54.5, 67.5] & 8.7\%  & ---   \\
 D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
 \midrule
 \multicolumn{6}{l}{\textit{Verifier ablation (C vs D), Holm-corrected McNemar:}} \\
-\multicolumn{6}{l}{Claude C1:D1 $p=0.4240$; C2:D2 $p=0.0382$ \qquad Qwen C1:D1 $p=1.0000$; C2:D2 $p=0.5406$} \\
+\multicolumn{6}{l}{Claude C1:D1 $p=0.4240$; C2:D2 $p=0.0382$ \qquad Qwen C1:D1 $p=1.0000$; C2:D2 $p=0.0781$} \\
 \bottomrule
 \end{tabular}
 \caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Propagation rate is computed over the problems correctly solved by the clean pipeline (B).}\label{tab:conditions_results}
@@ -552,13 +552,13 @@ Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \
 \caption{Verifier catch rate and propagation rate by error type, injection stage, and prompt strategy (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:errortype}
 \end{table}
 
-The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on both Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and Qwen 2.5 72B (63.0\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance.
+The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and matches it on Qwen 2.5 72B (62.5\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance.
 
 \subsection*{RQ1: How do planning vs. execution errors propagate, and does removing the verifier increase failure?}
 
-To begin with, injections in the planner agent (Condition C1) propagate to the final output only in 5.0\% of the cases on Claude and in 5.6\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). In contrast, solver-stage injections (Condition C2) propagate at 12.9\% on Claude and 15.9\% on Qwen—more than double the plan-stage rate (Claude OR = 0.28, $p = 0.0084$; Qwen OR = 0.32, $p = 0.0164$).
+To begin with, injections in the planner agent (Condition C1) propagate to the final output only in 5.0\% of the cases on Claude and in 4.0\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). In contrast, solver-stage injections (Condition C2) propagate at 12.9\% on Claude and 11.2\% on Qwen—more than double the plan-stage rate (Claude OR = 0.28, $p = 0.0084$; Qwen OR = 0.35, $p = 0.0515$).
 
-Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 12.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} = 0.0382$) and from 15.9\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.5406$). In contrast, removing the verifier for plan-stage injections (Condition D1) only slightly increases propagation to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.4240$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), confirming that verifiers provide minimal additional benefit at the planning stage. In other words, verifier agents provide a strong defense against late-stage execution errors, while planning errors are largely self-corrected by intermediate agents before reaching the verification steps.
+Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 12.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} = 0.0382$) and from 11.2\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.0781$). In contrast, removing the verifier for plan-stage injections (Condition D1) only slightly increases propagation to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.4240$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), confirming that verifiers provide minimal additional benefit at the planning stage. In other words, verifier agents provide a strong defense against late-stage execution errors, while planning errors are largely self-corrected by intermediate agents before reaching the verification steps.
 
 \subsection*{RQ2: What are the effects of various verifier prompting strategies to catch errors with different levels of severity?}
 
@@ -783,9 +783,7 @@ Minfeng Qi, Huajie Chen, and Wanlei Zhou.
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 
-\section*{Appendix}
-
-\subsection*{A \quad Role prompts}
+\section{Role Prompts}\label{sec:appendix_prompts}
 
 \paragraph{Decomposer.}
 \begin{quote}
@@ -840,10 +838,9 @@ If you reject, explain the error in one sentence, and provide a corrected line: 
 \textit{Solve the problem step by step. End with the line: \texttt{FINAL ANSWER: <answer>}.}
 \end{quote}
 
-\subsection*{B \quad Injection examples}
+\section{Injection Examples}\label{sec:appendix_injections}
 
 \paragraph{Number swap.}
-\textbf{Number swap.}
 ``Step 1: add 45 and 12.'' $\rightarrow$ ``Step 1: add 76 and 12.''
 (step labels unchanged).
 
@@ -852,7 +849,6 @@ If you reject, explain the error in one sentence, and provide a corrected line: 
 ``Compute 250 $\times$ 0.2.'' $\rightarrow$ ``Compute 150 $\times$ 0.2.''
 
 \paragraph{Operation flip.}
-\textbf{Operation flip.}
 ``Multiply the total by 3.'' $\rightarrow$ ``Divide the total by 3.''
 
 ``Add the shipping cost at the end.'' $\rightarrow$ ``Subtract the shipping
@@ -862,7 +858,6 @@ cost at the end.''
 the time.''
 
 \paragraph{Semantic logic error.}
-\textbf{Semantic logic error.}
 ``Use the discounted price first, then add the service fee.''
 $\rightarrow$ ``Add the service fee first, then apply the discount to the total.''
 
@@ -875,7 +870,7 @@ splitting into groups.''
 $\rightarrow$ ``Compare the amount with the target before subtracting the
 intermediate cost.''
 
-\subsection*{C \quad Representative run trace}
+\section{Representative Run Trace}\label{sec:appendix_trace}
 Below is a representative trace from our experimental runs (problem ID: \texttt{gsmhard-train-1209}), showing how a plan-stage number swap is propagated by the solver and subsequently corrected by the verifier:
 
 \paragraph{Problem.}
@@ -909,131 +904,7 @@ VERDICT: REJECT\\
 FINAL ANSWER: 5032}
 \end{quote}
 
-\subsection*{D \quad Master Experimental Reports}\label{sec:appendix_reports}
-
-\paragraph{Decomposer.}
-\begin{quote}
-\textit{You are a planning agent. Break the problem into a short numbered plan of 2-5 concrete steps with any intermediate quantities needed. Do NOT solve it. Output only the plan.}
-\end{quote}
-
-\paragraph{Solver.}
-\begin{quote}
-\textit{You are a solving agent. Execute the given plan step by step on the problem. Show brief working, then end with the line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
-
-\paragraph{Verifier (Direct).}
-\begin{quote}
-\textit{You are a verification agent. Check the proposed solution against the original problem. If correct, reply 'VERDICT: ACCEPT'. If you find an error, reply 'VERDICT: REJECT', explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
-
-\paragraph{Verifier (Chain-of-Thought).}
-\begin{quote}
-\textit{You are a verification agent. Check the proposed solution against the original problem.\\
-First, write down your step-by-step verification reasoning (thinking out loud). In your reasoning:
-\begin{itemize}
-    \item Carefully read the original problem statement to identify all numerical inputs, constraints, and implicit/explicit assumptions.
-    \item Confirm if the proposed solution correctly read the problem and applied all necessary assumptions.
-    \item Verify the mathematical logic and calculations step-by-step.
-\end{itemize}
-Then, end your response with:\\
-VERDICT: ACCEPT (if the solution is correct)\\
-OR\\
-VERDICT: REJECT\\
-If you reject, explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
-
-\paragraph{Verifier (Rubric).}
-\begin{quote}
-\textit{You are a verification agent. Evaluate the proposed solution by systematically verifying these four items:
-\begin{enumerate}
-    \item Reading \& Assumptions: Did the solution correctly read the problem text, capture all conditions, and apply correct assumptions?
-    \item Variables: Are the numbers used from the question identical to the original problem?
-    \item Operations: Are the mathematical operations chosen (add/sub/mult/div) logically correct?
-    \item Calculations: Are the calculations mathematically correct?
-\end{enumerate}
-Write down your evaluation for each of the 4 points above.\\
-Then, end your response with:\\
-VERDICT: ACCEPT (if all checks pass)\\
-OR\\
-VERDICT: REJECT (if any check fails)\\
-If you reject, explain the error in one sentence, and provide a corrected line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
-
-\paragraph{Single agent.}
-\begin{quote}
-\textit{Solve the problem step by step. End with the line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
-
-\subsection*{B \quad Injection examples}
-
-\paragraph{Number swap.}
-\textbf{Number swap.}
-``Step 1: add 45 and 12.'' $\rightarrow$ ``Step 1: add 76 and 12.''
-(step labels unchanged).
-
-``Take the 8 apples.'' $\rightarrow$ ``Take the 3 apples.''
-
-``Compute 250 $\times$ 0.2.'' $\rightarrow$ ``Compute 150 $\times$ 0.2.''
-
-\paragraph{Operation flip.}
-\textbf{Operation flip.}
-``Multiply the total by 3.'' $\rightarrow$ ``Divide the total by 3.''
-
-``Add the shipping cost at the end.'' $\rightarrow$ ``Subtract the shipping
-cost at the end.''
-
-``Divide the distance by the time.'' $\rightarrow$ ``Multiply the distance by
-the time.''
-
-\paragraph{Semantic logic error.}
-\textbf{Semantic logic error.}
-``Use the discounted price first, then add the service fee.''
-$\rightarrow$ ``Add the service fee first, then apply the discount to the total.''
-
-``Since the boys and girls were split equally, divide the total by 2 before
-applying the shell-count rule.''
-$\rightarrow$ ``Apply the shell-count rule directly to the total before
-splitting into groups.''
-
-``Find the remaining amount after step 2, then compare it with the target.''
-$\rightarrow$ ``Compare the amount with the target before subtracting the
-intermediate cost.''
-
-\subsection*{C \quad Representative run trace}
-Below is a representative trace from our experimental runs (problem ID: \texttt{gsmhard-train-1209}), showing how a plan-stage number swap is propagated by the solver and subsequently corrected by the verifier:
-
-\paragraph{Problem.}
-\begin{quote}
-\textit{The local firefighters are doing a ``fill the boot'' fundraiser. Their goal is to raise \$3522385. After the first 3 hours, they have raised \$2100. For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?}
-\end{quote}
-
-\paragraph{Decomposer plan.}
-\begin{quote}
-\textit{1. Calculate the amount raised per hour by dividing \$2100 by 3 hours.\\
-2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
-\end{quote}
-
-\paragraph{Injected plan-stage fault (C1 condition - Number swap).}
-\begin{quote}
-\textit{1. Calculate the amount raised per hour by dividing \textbf{\$1890} by 3 hours.\\
-2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
-\end{quote}
-
-\paragraph{Solver execution.}
-\begin{quote}
-\textit{Step 1: Calculate the amount raised per hour: \$1890 $\div$ 3 = \$630 per hour.\\
-Step 2: Divide the total goal by the hourly rate: \$3,522,385 $\div$ \$630 = 5,591.88... Rounding up to complete the goal: 5,592 hours.\\
-FINAL ANSWER: 5592}
-\end{quote}
-
-\paragraph{Verifier verdict \& correction.}
-\begin{quote}
-\textit{The problem states they raised \$2100 in the first 3 hours, giving a rate of \$2100 $\div$ 3 = \$700 per hour. The proposed solution incorrectly uses \$1890 and \$630 per hour instead. The correct calculation is \$3,522,385 $\div$ \$700 = 5,031.978..., which rounds up to 5,032 hours.\\
-VERDICT: REJECT\\
-FINAL ANSWER: 5032}
-\end{quote}
-
-\subsection*{D \quad Master Experimental Reports}\label{sec:appendix_reports}
+\section{Master Experimental Reports}\label{sec:appendix_reports}
 
 This appendix presents the full master experimental reports and tables across all conditions, models (Claude Sonnet 4.6 and Qwen 2.5 72B Instruct), injection types, severity levels, and prompt strategies (GSM-Hard $n=200$).
 
@@ -1169,18 +1040,18 @@ Semantic Logic     & 0.69 [0.25, 1.87] & 0.4642 & 3.27 [0.67, 15.92] & 0.1427 & 
 \caption{Multivariable logistic regression odds ratios (OR) for fault survival ($n=252$).}\label{tab:logit_master}
 \end{table}
 
-\subsection*{E \quad Answers to Omitted Research Sub-Questions}\label{sec:appendix_answers}
+\section{Answers to Omitted Research Sub-Questions}\label{sec:appendix_answers}
 
 This appendix provides concise, point-form answers to the specific secondary research sub-questions that were streamlined out of the main text.
 
-\subsubsection*{1. Fault Severity \& Sensitivity Dynamics}
+\subsection{Fault Severity \& Sensitivity Dynamics}
 \begin{itemize}
     \item \textbf{Injection Stage Dominance:} The injection stage (planning vs. execution) is the primary determinant of fault propagation. Fault severity (mild, moderate, severe) plays a secondary, non-monotonic role.
     \item \textbf{Direct Verifier Sensitivity:} Under Direct verification, verifiers exhibit noisy sensitivity to numerical slip magnitude (e.g., solver-stage number-swap propagation on Claude is 0.0\% for mild, 18.8\% for moderate, and 7.7\% for severe; on Qwen, 9.1\% mild, 20.0\% moderate, 22.2\% severe).
     \item \textbf{Structured Verifier Neutralization:} Deploying Chain-of-Thought (CoT) or Rubric verification neutralizes numerical severity effects, suppressing propagation for both mild and moderate number swaps to \textbf{0.0\%} across models (Table~\ref{tab:master_strategy}).
 \end{itemize}
 
-\subsubsection*{2. Computational Overhead of Structured Verification}
+\subsection{Computational Overhead of Structured Verification}
 \begin{itemize}
     \item \textbf{Multi-Agent Baseline Overhead:} Moving from a single-agent baseline (Condition A) to a clean multi-agent pipeline (Condition B) increases total token cost per solved problem by \textbf{$3.1\times$} on Claude (526 to 1,616 tokens) and \textbf{$2.2\times$} on Qwen (737 to 1,623 tokens).
     \item \textbf{Verifier Stage Overhead:} Structured prompting (CoT and Rubric) increases token consumption at the verifier stage by \textbf{30\%--50\%} relative to Direct verification.
