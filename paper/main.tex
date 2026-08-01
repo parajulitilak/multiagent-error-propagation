@@ -445,7 +445,119 @@ The analysis scripts regenerate the reported condition-level, verifier-strategy,
 
 \section{Results}
 
-\textbf{Does the pipeline beat one agent?} Figure~\ref{fig:acc} compares
+% ---------------------------------------------------------------
+% TABLE 1 — Condition-level accuracy and propagation (RQ1)
+% ---------------------------------------------------------------
+\begin{table}[t]
+\centering\small
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Cond.} & \textbf{Description} & \textbf{Accuracy} & \textbf{95\% CI} & \textbf{Prop. Rate} & \textbf{$p_{\mathrm{holm}}$ vs B} \\
+\midrule
+A  & Single-agent baseline          & 65.5\% & [59.0, 72.0] & ---   & 0.0645 \\
+B  & Clean pipeline                 & 69.5\% & [63.0, 76.0] & ---   & ---    \\
+C1 & Plan injected + verifier       & 66.5\% & [60.0, 73.0] & 5.0\% & 0.1406 \\
+C2 & Solver injected + verifier     & 60.5\% & [54.0, 67.0] & 12.9\% & ---   \\
+D1 & Plan injected, no verifier     & 64.5\% & [58.0, 71.0] & 8.6\%  & ---   \\
+D2 & Solver injected, no verifier   & 51.5\% & [44.5, 58.5] & 27.3\% & ---   \\
+\midrule
+\multicolumn{4}{l}{\textit{Verifier ablation (C vs D), Holm-corrected McNemar:}} & \multicolumn{2}{l}{C1:D1 $p=0.4240$;\; C2:D2 $p=0.0382$} \\
+\bottomrule
+\end{tabular}
+\caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6, GSM-Hard $n=200$). Propagation rate is computed over the 139 problems correctly solved by the clean pipeline (B). $p_{\mathrm{holm}}$ for C2:D2 reflects the causal verifier contribution at the solver stage.}\label{tab:conditions_results}
+\end{table}
+
+% ---------------------------------------------------------------
+% FIGURE 1 — Accuracy by condition (RQ1)
+% ---------------------------------------------------------------
+\begin{figure}[t]\centering
+\includegraphics[width=0.85\linewidth]{fig2_acc.png}
+\caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
+\end{figure}
+
+% ---------------------------------------------------------------
+% FIGURE 2 — Fault fate breakdown (RQ1)
+% ---------------------------------------------------------------
+\begin{figure}[t]\centering
+\includegraphics[width=0.85\linewidth]{fig3_acc.png}
+\caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
+\end{figure}
+
+% ---------------------------------------------------------------
+% TABLE 2 — Strategy catch/correction/propagation (RQ3)
+% ---------------------------------------------------------------
+\begin{table}[t]
+\centering\small
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Direct}} & \multicolumn{2}{c}{\textbf{CoT}} & \multicolumn{2}{c}{\textbf{Rubric}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+\textbf{Stage} & \textbf{Metric} & Catch\% & Corr.\% & Catch\% & Corr.\% & Catch\% & Corr.\% \\
+\midrule
+\textbf{Plan ($C_1$)} & Overall & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
+& Prop. Rate & \multicolumn{2}{c}{5.0\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{2.1\%} \\
+\midrule
+\textbf{Solver ($C_2$)} & Overall & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
+& Prop. Rate & \multicolumn{2}{c}{12.9\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{1.4\%} \\
+\midrule
+\textbf{Severity (Solver, number swap only)} & & & & & & & \\
+Mild   & Prop. Rate & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{6.7\%}  & \multicolumn{2}{c}{0.0\%}  \\
+Moderate & Prop. Rate & \multicolumn{2}{c}{18.8\%} & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{6.7\%}  \\
+Severe & Prop. Rate & \multicolumn{2}{c}{7.7\%}  & \multicolumn{2}{c}{0.0\%}  & \multicolumn{2}{c}{0.0\%}  \\
+\bottomrule
+\end{tabular}
+\caption{Verifier catch rate, correction precision, and propagation rate by prompt strategy, injection stage, and fault severity (Claude Sonnet 4.6, $n=200$). Severity rows cover number-swap injections only.}\label{tab:strategy}
+\end{table}
+
+% ---------------------------------------------------------------
+% TABLE 3 — Token cost by strategy (RQ3 cost sub-question)
+% ---------------------------------------------------------------
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Condition} & \textbf{Direct} & \textbf{CoT} & \textbf{Rubric} & \textbf{vs Direct} \\
+\midrule
+Single-agent (A)          & \multicolumn{3}{c}{526 tok/solved} & --- \\
+Clean pipeline (B)        & \multicolumn{3}{c}{1,616 tok/solved} & $+3.1\times$ vs A \\
+\midrule
+Avg tok/problem (C2)      & 1,145 & 1,419 & 1,503 & CoT $+23.9\%$;\; Rubric $+31.3\%$ \\
+Tok/solved problem (C2)   & 1,892 & 2,027 & 2,163 & CoT $+7.1\%$;\; Rubric $+14.3\%$ \\
+Verifier tok only (C2)    & 103,378 & 157,191 & 173,825 & CoT $+52.1\%$;\; Rubric $+68.1\%$ \\
+\bottomrule
+\end{tabular}
+\caption{Token cost by verifier prompting strategy under solver-injected condition C2 (Claude Sonnet 4.6, GSM-Hard $n=200$). Verifier-only tokens isolate the prompting overhead.}\label{tab:cost}
+\end{table}
+
+% ---------------------------------------------------------------
+% TABLE 4 — Error-type catch/propagation map (RQ4)
+% ---------------------------------------------------------------
+\begin{table}[t]
+\centering\small
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Direct}} & \multicolumn{2}{c}{\textbf{CoT}} & \multicolumn{2}{c}{\textbf{Rubric}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+\textbf{Error Type} & \textbf{Stage} & Catch\% & Prop.\% & Catch\% & Prop.\% & Catch\% & Prop.\% \\
+\midrule
+Number swap    & Plan   & 4.9\%  & 2.4\%  & 5.3\%  & 0.0\%  & 4.1\%  & 0.0\%  \\
+Number swap    & Solver & 19.6\% & 4.3\%  & 19.6\% & 0.0\%  & 24.4\% & 2.2\%  \\
+\midrule
+Operation flip & Plan   & 0.0\%  & 2.6\%  & 0.0\%  & 2.9\%  & 0.0\%  & 4.8\%  \\
+Operation flip & Solver & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  & 2.1\%  & 2.1\%  \\
+\midrule
+Semantic logic & Plan   & 15.0\% & 3.3\%  & 17.0\% & 2.1\%  & 14.3\% & 2.0\%  \\
+Semantic logic & Solver & 82.6\% & 4.3\%  & 88.9\% & 2.2\%  & 83.0\% & 0.0\%  \\
+\bottomrule
+\end{tabular}
+\caption{Verifier catch rate and propagation rate by error type, injection stage, and prompt strategy (Claude Sonnet 4.6, $n=200$). Operation flip at the solver stage has a 0\% catch rate under Direct and CoT, revealing a systematic blind spot.}\label{tab:errortype}
+\end{table}
+
+% ---------------------------------------------------------------
+% Q&A INTERPRETATION PARAGRAPHS
+% ---------------------------------------------------------------
+
+\textbf{Does the pipeline beat one agent?} Table~\ref{tab:conditions_results} and Figure~\ref{fig:acc} compare
 conditions A and B on the Claude Sonnet 4.6 GSM-Hard run. The clean
 multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for
 the single-agent baseline (A), a modest improvement that does not remain
@@ -464,7 +576,7 @@ among 139 valid injections, only 90 are absorbed, 31 are caught and corrected,
 the verifier becomes far more active when the corruption is inserted at the
 solver stage.
 
-\textbf{Does position matter?} Yes. Propagation is substantially higher for
+\textbf{Does position matter?} Yes. As shown in Table~\ref{tab:conditions_results}, propagation is substantially higher for
 solver-stage injection than for plan-stage injection under the direct verifier:
 12.9\% in C2 versus 5.0\% in C1. The logistic model reports an odds ratio of
 0.28 for the early-stage coefficient ($p = 0.0084$), indicating that
@@ -476,9 +588,8 @@ them.
 
 \textbf{Does severity matter?} Severity effects are visible but are weaker
 than stage and verifier-strategy effects in the current number-swap results.
-For Claude under the direct verifier, plan-stage number-swap propagation is
-11.1\% for mild faults, 5.9\% for moderate faults, and 6.7\% for severe
-faults; solver-stage number-swap propagation is 0.0\%, 18.8\%, and 7.7\%
+As shown in Table~\ref{tab:strategy}, for Claude under the direct verifier, solver-stage number-swap propagation is
+0.0\%, 18.8\%, and 7.7\%
 for mild, moderate, and severe faults, respectively. The main takeaway is not
 a simple monotonic severity gradient, but that severity interacts with stage
 and downstream correction dynamics rather than determining propagation on its
@@ -486,7 +597,7 @@ own.
 
 \textbf{What does the verifier contribute?} The verifier's causal contribution
 is clearest at the solver stage. Under direct prompting, removing the verifier
-raises propagation from 12.9\% in C2 to 27.3\% in D2, and this contrast is
+raises propagation from 12.9\% in C2 to 27.3\% in D2 (Table~\ref{tab:conditions_results}), and this contrast is
 significant after Holm correction ($p_{\mathrm{holm}} = 0.0382$). By contrast,
 the plan-stage comparison is much smaller: propagation rises from 5.0\% in C1
 to 8.6\% in D1, and the C1 versus D1 contrast is not significant
@@ -494,7 +605,7 @@ to 8.6\% in D1, and the C1 versus D1 contrast is not significant
 most when the corruption is inserted late, after the solver has already
 produced a flawed final reasoning trace.
 
-\textbf{Which verifier catches what?} Verifier strategy strongly affects
+\textbf{Which verifier strategy catches what?} Table~\ref{tab:strategy} shows that verifier strategy strongly affects
 downstream outcomes. On Claude, solver-stage propagation under the direct
 verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and
 rubric prompting. Correction precision rises from 66.0\% under the direct
@@ -506,37 +617,8 @@ detects faults but fails during repair, whereas chain-of-thought and rubric
 verifiers are substantially better at converting detection into correct final
 answers.
 
-\textbf{How much does verification cost?} Multi-agent execution carries a substantial token overhead. The single-agent baseline (A) is highly efficient, requiring only 526 tokens per solved problem on Claude Sonnet 4.6. Moving to the clean multi-agent pipeline (B) increases this to 1,616 tokens per solved problem, a 3.1$\times$ expansion. Under fault-injected conditions (C2), verifier strategies introduce different cost profiles: direct verification averages 1,145 tokens per problem (1,892 per solved problem); chain-of-thought verification increases average token usage to 1,419 tokens per problem (a 23.9\% increase); and the rubric strategy is the most expensive at 1,503 tokens per problem (a 31.3\% increase). These measurements highlight a clear trade-off between reliability and budget: while chain-of-thought and rubric prompting reduce solver-stage fault propagation from 12.9\% to 1.4\%, they require 24--31\% more tokens than direct verification.
+\textbf{How much does verification cost?} Table~\ref{tab:cost} shows that multi-agent execution carries a substantial token overhead. The single-agent baseline (A) requires only 526 tokens per solved problem on Claude Sonnet 4.6. Moving to the clean multi-agent pipeline (B) increases this to 1,616 tokens per solved problem, a 3.1$\times$ expansion. Under fault-injected conditions (C2), verifier strategies introduce different cost profiles: direct verification averages 1,145 tokens per problem; chain-of-thought increases this by 23.9\%; and the rubric strategy by 31.3\%. These measurements highlight a clear trade-off between reliability and budget: while chain-of-thought and rubric prompting reduce solver-stage fault propagation from 12.9\% to 1.4\%, they require 24--31\% more tokens than direct verification.
 
-\begin{figure}[t]\centering
-\includegraphics[width=0.85\linewidth]{fig2_acc.png}
-\caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
-\end{figure}
-
-\begin{figure}[t]\centering
-\includegraphics[width=0.85\linewidth]{fig3_acc.png}
-\caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
-\end{figure}
-
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{lcccccc}
-\toprule
-& \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
-\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
-\textbf{Condition / Stratum} & Catch \% & Correct \% & Catch \% & Correct \% & Catch \% & Correct \% \\
-\midrule
-\textbf{Plan Injected ($C_1$)} & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
-\textbf{Solver Injected ($C_2$)} & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
-\midrule
-\textbf{Mild Severity} & 0.0\% & 0.0\% & 6.7\% & 50.0\% & 0.0\% & 0.0\% \\
-\textbf{Moderate Severity} & 18.8\% & 50.0\% & 0.0\% & 0.0\% & 6.7\% & 100.0\% \\
-\textbf{Severe Severity} & 7.7\% & 50.0\% & 0.0\% & 0.0\% & 0.0\% & 0.0\% \\
-\bottomrule
-\end{tabular}
-\caption{Verifier catch rate and correction precision by prompt strategy, injection position, and fault severity (Claude Sonnet 4.6, $n=200$).}\label{tab:map}
-\end{table}
 
 \section{Analysis}
 The traces reveal three recurring mechanisms. First, many plan-stage faults are
