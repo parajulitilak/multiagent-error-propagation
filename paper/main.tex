@@ -906,9 +906,12 @@ FINAL ANSWER: 5032}
 
 \section{Master Experimental Reports}\label{sec:appendix_reports}
 
-This appendix presents the full master experimental reports and tables across all conditions, models (Claude Sonnet 4.6 and Qwen 2.5 72B Instruct), injection types, severity levels, and prompt strategies (GSM-Hard $n=200$).
+This appendix presents the full master experimental reports and data tables across all conditions, models (Claude Sonnet 4.6 and Qwen 2.5 72B Instruct), injection types, severity levels, and prompt strategies (GSM-Hard $n=200$).
 
-\begin{table}[h]
+\subsection{Master Verifier Strategy Performance}
+Table~\ref{tab:master_strategy} summarizes the verifier catch rate and correction precision broken down by prompt strategy, injection position, and fault severity level across both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct.
+
+\begin{table}[htbp]
 \centering\small
 \begin{tabular}{lcccccc}
 \toprule
@@ -1039,6 +1042,8 @@ Semantic Logic     & 0.69 [0.25, 1.87] & 0.4642 & 3.27 [0.67, 15.92] & 0.1427 & 
 }
 \caption{Multivariable logistic regression odds ratios (OR) for fault survival ($n=252$).}\label{tab:logit_master}
 \end{table}
+
+\clearpage
 
 \section{Answers to Omitted Research Sub-Questions}\label{sec:appendix_answers}
 
