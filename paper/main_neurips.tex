@@ -11,9 +11,9 @@
 % Convention: \pending{...} marks every number or claim that must come from
 % our own runs. Nothing pending may survive into a submitted version.
 % =========================================================================
-\documentclass[11pt]{article}
-\usepackage[T1]{fontenc}
-\usepackage[margin=1in]{geometry}
+\documentclass{article}
+\PassOptionsToPackage{numbers,square,sort&compress}{natbib}
+\usepackage[preprint]{neurips_2026}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -23,21 +23,19 @@
 \usepackage[colorlinks=true, citecolor=blue, urlcolor=blue, linkcolor=blue]{hyperref}
 \usepackage{caption}
 \captionsetup{labelsep=period,font=small}
-\usepackage[numbers,square,sort&compress]{natbib}
 \usepackage{xcolor}
 \newcommand{\pending}[1]{\textcolor{purple}{[#1]}}
-\renewcommand{\thesection}{\Roman{section}}
 
-\title{\texorpdfstring{\huge\bfseries Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}{Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}}
+\title{Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}
 \author{
 \textbf{Tilak Parajuli}$^{1,*}$ \qquad
 \textbf{Johnny Kozman}$^{1,*}$ \qquad
 \textbf{Arushi Waddepalli}$^{1,*}$\\[1.2em]
 $^{1}$SISTER, AI/ML Track \\
 Dubai Computer Science Society \& Delta Rising Foundation\\
+\textit{NeurIPS 2026 Workshop submission}\\
 \small $^{*}$Contributed equally\\
 }
-\date{August 2026}
 
 \begin{document}
 \maketitle
@@ -71,7 +69,6 @@ direct verifier to 95.9\% and 100.0\%, respectively. The result is a map of
 which verifier catches which error, where it was injected, and how fault type
 and severity interact with stage boundaries and verifier design. We release
 code, prompts, and full traces.
-\medskip\noindent\textbf{Keywords:} multi-agent systems, LLM pipelines, error propagation, fault injection, verification, chain-of-thought
 \end{abstract}
 
 \section{Introduction}
@@ -338,15 +335,11 @@ quantity with a wrong value drawn from a severity-controlled multiplier set;
 (\emph{add}$\leftrightarrow$\emph{subtract},
 \emph{multiply}$\leftrightarrow$\emph{divide}, and analogous pairs); and
 \emph{semantic logic error}, which rewrites a plan or solution to introduce a
-single logical reasoning flaw while preserving fluent surface form. Programmatically,
-number swaps and operation flips are executed rule-based via regular expression matching,
-while semantic logic errors are generated dynamically via a separate LLM call using a
-dedicated fault-injection prompt. List and
+single logical reasoning flaw while preserving fluent surface form. List and
 step labels are excluded from number swap: corrupting ``Step 1'' changes no
 quantity, and admitting such perturbations would dilute the injected-fault
-population with harmless cases and bias propagation rates downward.
-
-Every injection logs the operator, the original and replacement spans, and the
+population with harmless cases and bias propagation rates downward. Every
+injection logs the operator, the original and replacement spans, and the
 character position, so each downstream error is attributable to a specific,
 inspectable change.
 
@@ -392,13 +385,10 @@ level.}
 \label{sec:strategies}
 The verifier is the pipeline's final stage, and every run stores the exact
 problem and proposed solution the verifier receives. We compare three verifier
-prompt strategies on matched experimental conditions: \emph{V1} (Direct, represented
-as \texttt{direct} in the codebase), the baseline direct verifier used in our main
-runs; \emph{V2} (Chain-of-Thought, represented as \texttt{cot}), a chain-of-thought
-verifier instructed to generate step-by-step reasoning before outputting a verdict;
-and \emph{V3} (Rubric, represented as \texttt{rubric}), a rubric verifier that
-systematically evaluates the solution against four explicit checks (reading and assumptions, variables,
-operations, and calculations). Because the same problem sample, injection design, and
+prompt strategies on matched experimental conditions: V1, the direct verifier
+used in the main run; V2, a chain-of-thought verifier instructed to re-derive
+the solution before judging; and V3, a rubric verifier that checks an explicit
+list of failure points. Because the same problem sample, injection design, and
 condition structure are held fixed across strategies, differences in catch rate,
 correction rate, and propagation are attributable to verifier prompting rather
 than upstream pipeline variation.
@@ -409,11 +399,12 @@ of four fates: \emph{caught and corrected} (verifier rejects; final answer
 correct), \emph{caught but not corrected} (verifier rejects; final answer
 wrong), \emph{silently propagated} (verifier accepts; final answer wrong), or
 \emph{absorbed} (verifier accepts; final answer nevertheless correct, e.g.,
-the solver ignored the corrupted span). We report:
-(i)~\emph{accuracy} per condition;
-(ii)~\emph{propagation rate}, defined as the fraction of valid injections that yield an incorrect final answer, calculated exclusively over the subset of problems correctly solved by the clean pipeline (Condition~B) to ensure that downstream errors are causally attributable to the injected fault;
-(iii)~\emph{catch rate} and \emph{correction rate} of the verifier, both overall and stratified by error type, severity, and prompting strategy; and
-(iv)~\emph{token cost}, measured as the average number of tokens consumed per solved problem.
+the solver ignored the corrupted span). We report: accuracy per condition;
+\emph{propagation rate}, the fraction of valid injections whose final answer
+is wrong, restricted to problems condition B solved correctly so that new
+errors are attributable to the injection; \emph{catch rate} and
+\emph{correction rate} of the verifier, overall and stratified by error type,
+severity, and prompt strategy; and cost per solved problem in tokens.
 
 \subsection{Statistical analysis}
 All condition contrasts use McNemar's exact test on paired
@@ -423,133 +414,32 @@ percentile-bootstrap intervals (10{,}000 resamples); rates carry Wilson
 score intervals. The effects of injection position, fault type, and verifier
 strategy on fault survival are estimated by logistic regression, reported as
 odds ratios. Because several contrasts are tested, $p$-values are
-Holm--Bonferroni corrected~\citep{dror2018hitchhiker}. Runs use
-temperature~0 on a fixed seeded sample.
+Holm--Bonferroni corrected~\citep{dror2018hitchhiker}. Main runs use
+temperature~0 on a fixed seeded sample; robustness replications use
+temperature~0.7 over three seeds, reported as mean and interval.
 
 \subsection{Setup and reproducibility}
-Main experiments use Claude Sonnet 4.6 with temperature 0; cross-model replications use Qwen
+Main experiments use Claude Sonnet 4.6 with temperature 0 for the primary
+runs and 0.7 for robustness replications; cross-model replications use Qwen
 2.5 72B Instruct under the same condition design. The main dataset is
 GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
 held fixed, with operators and severity levels as in
 \S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~A. Total API cost: $\sim$\$28. All configuration is
-specified through released YAML files in the repository:
-\texttt{configs/experiment.yaml} (Claude Direct baseline),
-\texttt{configs/experiment\_cot.yaml} (Claude Chain-of-Thought), and
-\texttt{configs/experiment\_rubric.yaml} (Claude Rubric), with corresponding files for the Qwen replication.
-The pipeline execution script is invoked as \texttt{python -m src.runner --config [file.yaml]}. 
-The analysis scripts regenerate the reported condition-level, verifier-strategy, and model-comparison results from the released traces via:
-\texttt{python -m src.stats} (general propagation and McNemar statistics),
-\texttt{python -m src.analyze\_rq2\_verifier\_strategies} (prompt strategy comparisons), and
-\texttt{python -m src.compare\_models} (cross-model comparison summaries).
+verbatim in Appendix~A. Total API cost: $\sim$\$28. All configuration is specified through released YAML
+files in the repository, and the analysis scripts regenerate the reported
+condition-level, verifier-strategy, and model-comparison results from the
+released traces.
 
 \section{Results}
 
-% ---------------------------------------------------------------
-% TABLE 1 — Condition-level accuracy and propagation (RQ1)
-% ---------------------------------------------------------------
-\begin{table}[t]
-\centering\small
-\begin{tabular}{llcccc}
-\toprule
-\textbf{Cond.} & \textbf{Description} & \textbf{Accuracy} & \textbf{95\% CI} & \textbf{Prop. Rate} & \textbf{$p_{\mathrm{holm}}$ vs B} \\
-\midrule
-\multicolumn{6}{l}{\textbf{Claude Sonnet 4.6}} \\
-A  & Single-agent baseline          & 65.5\% & [59.0, 72.0] & ---   & 0.0645 \\
-B  & Clean pipeline                 & 69.5\% & [63.0, 76.0] & ---   & ---    \\
-C1 & Plan injected + verifier       & 66.5\% & [60.0, 73.0] & 5.0\% & 0.1406 \\
-C2 & Solver injected + verifier     & 60.5\% & [54.0, 67.0] & 12.9\% & ---   \\
-D1 & Plan injected, no verifier     & 64.5\% & [58.0, 71.0] & 8.6\%  & ---   \\
-D2 & Solver injected, no verifier   & 51.5\% & [44.5, 58.5] & 27.3\% & ---   \\
-\midrule
-\multicolumn{6}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-A  & Single-agent baseline          & 62.5\% & [56.0, 69.5] & ---   & 1.0000 \\
-B  & Clean pipeline                 & 63.0\% & [56.5, 69.5] & ---   & ---    \\
-C1 & Plan injected + verifier       & 61.5\% & [55.0, 68.0] & 5.6\% & 1.0000 \\
-C2 & Solver injected + verifier     & 56.0\% & [49.0, 63.0] & 15.9\% & ---   \\
-D1 & Plan injected, no verifier     & 61.0\% & [54.5, 67.5] & 8.7\%  & ---   \\
-D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
-\midrule
-\multicolumn{6}{l}{\textit{Verifier ablation (C vs D), Holm-corrected McNemar:}} \\
-\multicolumn{6}{l}{Claude C1:D1 $p=0.4240$; C2:D2 $p=0.0382$ \qquad Qwen C1:D1 $p=1.0000$; C2:D2 $p=0.5406$} \\
-\bottomrule
-\end{tabular}
-\caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Propagation rate is computed over the problems correctly solved by the clean pipeline (B).}\label{tab:conditions_results}
-\end{table}
-
-% ---------------------------------------------------------------
-% FIGURE 1 — Accuracy by condition
-% ---------------------------------------------------------------
-\begin{figure}[t]\centering
-\includegraphics[width=0.85\linewidth]{fig2_acc.png}
-\caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
-\end{figure}
-
-% ---------------------------------------------------------------
-% FIGURE 2 — Fault fate breakdown
-% ---------------------------------------------------------------
-\begin{figure}[t]\centering
-\includegraphics[width=0.85\linewidth]{fig3_acc.png}
-\caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
-\end{figure}
-
-% ---------------------------------------------------------------
-% TABLE 2 — Strategy catch/correction/propagation
-% ---------------------------------------------------------------
-\begin{table}[t]
-\centering\small
-\begin{tabular}{llcccccc}
-\toprule
-& & \multicolumn{2}{c}{\textbf{Direct}} & \multicolumn{2}{c}{\textbf{CoT}} & \multicolumn{2}{c}{\textbf{Rubric}} \\
-\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
-\textbf{Stage} & \textbf{Metric} & Catch\% & Corr.\% & Catch\% & Corr.\% & Catch\% & Corr.\% \\
-\midrule
-\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
-\textbf{Plan ($C_1$)} & Overall & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
-& Prop. Rate & \multicolumn{2}{c}{5.0\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{2.1\%} \\
-\textbf{Solver ($C_2$)} & Overall & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
-& Prop. Rate & \multicolumn{2}{c}{12.9\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{1.4\%} \\
-\midrule
-\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-\textbf{Plan ($C_1$)} & Overall & 8.8\% & 54.5\% & 5.4\% & 57.1\% & 2.4\% & 33.3\% \\
-& Prop. Rate & \multicolumn{2}{c}{4.0\%} & \multicolumn{2}{c}{3.1\%} & \multicolumn{2}{c}{3.9\%} \\
-\textbf{Solver ($C_2$)} & Overall & 62.4\% & 85.9\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
-& Prop. Rate & \multicolumn{2}{c}{11.2\%} & \multicolumn{2}{c}{4.6\%} & \multicolumn{2}{c}{4.7\%} \\
-\bottomrule
-\end{tabular}
-\caption{Verifier catch rate, correction precision, and propagation rate by prompt strategy and injection stage (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:strategy}
-\end{table}
-
-% ---------------------------------------------------------------
-% TABLE 3 — Error-type catch/propagation map
-% ---------------------------------------------------------------
-\begin{table}[t]
-\centering\small
-\begin{tabular}{llcccccc}
-\toprule
-& & \multicolumn{2}{c}{\textbf{Direct}} & \multicolumn{2}{c}{\textbf{CoT}} & \multicolumn{2}{c}{\textbf{Rubric}} \\
-\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
-\textbf{Error Type} & \textbf{Stage} & Catch\% & Prop.\% & Catch\% & Prop.\% & Catch\% & Prop.\% \\
-\midrule
-\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
-Number swap    & Plan   & 4.9\%  & 2.4\%  & 5.3\%  & 0.0\%  & 4.1\%  & 0.0\%  \\
-Number swap    & Solver & 19.6\% & 4.3\%  & 19.6\% & 0.0\%  & 24.4\% & 2.2\%  \\
-Operation flip & Plan   & 0.0\%  & 2.6\%  & 0.0\%  & 2.9\%  & 0.0\%  & 4.8\%  \\
-Operation flip & Solver & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  & 2.1\%  & 2.1\%  \\
-Semantic logic & Plan   & 15.0\% & 3.3\%  & 17.0\% & 2.1\%  & 14.3\% & 2.0\%  \\
-Semantic logic & Solver & 82.6\% & 4.3\%  & 88.9\% & 2.2\%  & 83.0\% & 0.0\%  \\
-\midrule
-\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-Number swap    & Plan   & 8.6\%  & 8.6\%  & 4.5\%  & 2.3\%  & 4.3\%  & 4.3\%  \\
-Number swap    & Solver & 86.4\% & 29.5\% & 23.5\% & 2.9\%  & 80.0\% & 0.0\%  \\
-Operation flip & Plan   & 4.9\%  & 0.0\%  & 2.6\%  & 0.0\%  & 2.8\%  & 2.8\%  \\
-Operation flip & Solver & 13.2\% & 5.3\%  & 0.0\%  & 0.0\%  & 2.2\%  & 0.0\%  \\
-Semantic logic & Plan   & 14.0\% & 8.0\%  & 8.5\%  & 6.4\%  & 0.0\%  & 4.4\%  \\
-Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \\
-\bottomrule
-\end{tabular}
-\caption{Verifier catch rate and propagation rate by error type, injection stage, and prompt strategy (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:errortype}
-\end{table}
+\textbf{Does the pipeline beat one agent?} Figure~\ref{fig:acc} compares
+conditions A and B on the Claude Sonnet 4.6 GSM-Hard run. The clean
+multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for
+the single-agent baseline (A), a modest improvement that does not remain
+significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$). The result
+suggests that decomposition and verification can improve end-to-end
+performance, but the gain is smaller than the downstream effects of fault
+injection and verifier ablation.
 
 The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on both Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and Qwen 2.5 72B (63.0\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance.
 
@@ -561,9 +451,35 @@ Removing the verifier agent (Condition D2) causes solver-stage fault propagation
 
 \subsection*{RQ2: Verifier Prompting Strategies \& Error-Type Sensitivity}
 
-Verifier prompting strategy dictates repair precision and propagation control. Under Direct verification, verifiers catch errors but frequently fail to fix them, yielding 66.0\% correction precision on Claude and 85.9\% on Qwen. Structured verification dramatically improves repair quality: Chain-of-Thought (CoT) and Rubric verification increase correction precision to 95.9\%--100.0\% on Claude and 95.3\%--98.0\% on Qwen. Consequently, CoT and Rubric reduce solver-stage propagation to 1.4\% on Claude and 4.6\%--4.7\% on Qwen (Table~\ref{tab:strategy}). This gain requires modest computational overhead: CoT and Rubric increase verifier token usage by 30\%--50\%, adding only 23\%--37\% total token cost per problem.
+Verifier prompting strategy dictates repair precision and propagation control. Under Direct verification, verifiers catch errors but frequently fail to fix them, yielding 66.0\% correction precision on Claude and 85.9\% on Qwen. Structured verification dramatically improves repair quality: Chain-of-Thought (CoT) and Rubric verification increase correction precision to 95.9\%--100.0\% on Claude and 95.3\%--98.0\% on Qwen. Consequently, CoT and Rubric reduce solver-stage propagation to 1.4\% on Claude and 4.6\%--4.7\% on Qwen (Table~\ref{tab:map}). This gain requires modest computational overhead: CoT and Rubric increase verifier token usage by 30\%--50\%, adding only 23\%--37\% total token cost per problem.
 
 Verifier sensitivity varies sharply across error types (Table~\ref{tab:errortype}). Verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen, and reducing propagation to near 0.0\%. Conversely, operation flips (e.g., swapping addition for subtraction) represent a blind spot across all models and prompt strategies, yielding catch rates below 15.0\% and showing no benefit from verifier presence. Number-swap errors fall between these extremes: Direct verification misses number swaps, but Rubric and CoT verification suppress their propagation to 0.0\% on Claude and Qwen.
+
+\begin{figure}[t]\centering
+\includegraphics[width=0.85\linewidth]{fig2_acc.png}
+\caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
+\end{figure}
+
+\begin{figure}[t]\centering
+\includegraphics[width=0.85\linewidth]{fig3_acc.png}
+\caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Condition / Stratum} & Catch \% & Correct \% & Catch \% & Correct \% & Catch \% & Correct \% \\
+\midrule
+\textbf{Plan Injected ($C_1$)} & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
+\textbf{Solver Injected ($C_2$)} & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
+\bottomrule
+\end{tabular}
+\caption{Verifier catch rate and correction precision by prompt strategy and injection position (Claude Sonnet 4.6, $n=200$).}\label{tab:map}
+\end{table}
 
 \section{Analysis}
 
@@ -583,15 +499,9 @@ often unless a verifier catches and correctly repairs them. Verifier prompting
 strategy matters sharply: direct verifiers detect many failures but make more
 bad corrections, while chain-of-thought and rubric verifiers greatly improve
 correction precision and reduce final propagation. For practitioners, the main
-implication is that verification is significantly more critical for validating
-the solver's execution rather than the planner's plan. Because solvers naturally
-absorb many plan-stage errors (absorbing 125 out of 139 plan injections in our Claude Sonnet 4.6 runs),
-plan-level verification is largely redundant, only reducing propagation from 8.6\% (without a verifier, D1)
-to 5.0\% (with a verifier, C1). By contrast, execution-stage errors propagate directly to the
-output unless a verifier is present at the solver boundary, where it cuts propagation in half, from 27.3\% (D2)
-to 12.9\% (C2). When verification is deployed,
-structured verifier prompts are preferable when correction quality matters,
-justifying their 24--31\% token cost premium. More broadly, the results suggest that the
+implication is that verification budget is most valuable at the solver-to-
+verifier boundary and that structured verifier prompts are preferable when
+correction quality matters. More broadly, the results suggest that the
 reliability of agent pipelines depends not only on whether a verifier exists,
 but on where faults arise and how the verifier is instructed to reason about
 them.
@@ -624,10 +534,7 @@ tightening the solver prompt's plan adherence, so that plan-stage faults are
 not absorbed by silent re-derivation and the planning-stage estimate is
 sharpened; comparing a small verifier fine-tuned with QLoRA~\citep{dettmers2023qlora}
 on the released traces against the LLM judge, to test whether low-cost
-specialized oversight can match it; investigating dynamic verifier gating
-(e.g., only invoking the more expensive chain-of-thought or rubric verifiers
-when the solver expresses high uncertainty) to optimize the token cost budget;
-and evaluating learned inter-agent
+specialized oversight can match it; and evaluating learned inter-agent
 gating in the style of DebUnc~\citep{yoffe2024debunc} under our injection
 protocol, which would connect the measurement in this paper to the
 mitigation literature it motivates.
@@ -646,9 +553,10 @@ pre-registered contrast family~\citep{dror2018hitchhiker}. \emph{External
 validity}: results cover one primary reasoning dataset with objectively
 checkable answers and two model families; replication on both Claude Sonnet
 4.6 and Qwen 2.5 72B Instruct tests whether the observed propagation
-patterns depend on a single model. All conclusions in this paper are drawn
-from these deterministic primary runs (temperature 0) and are stated only where the outcomes
-across both model families agree.
+patterns depend on a single model. Robustness replications at temperature
+0.7 across three seeds are supported by the released harness, though the
+main conclusions in this paper are drawn from the deterministic primary
+runs. Conclusions are stated only where these checks agree.
 
 \begin{thebibliography}{99}
 
@@ -782,64 +690,50 @@ Minfeng Qi, Huajie Chen, and Wanlei Zhou.
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 
-\section*{Appendix}
-
-\subsection*{A \quad Role prompts}
+\section*{A \quad Role prompts}
 
 \paragraph{Decomposer.}
-\begin{quote}
-\textit{You are a planning agent. Break the problem into a short numbered plan of 2-5 concrete steps with any intermediate quantities needed. Do NOT solve it. Output only the plan.}
-\end{quote}
+ You are a planning agent. Break the problem into a short
+numbered plan of 2--5 concrete steps with any intermediate quantities needed.
+Do not solve it. Output only the plan.
 
 \paragraph{Solver.}
-\begin{quote}
-\textit{You are a solving agent. Execute the given plan step by step on the problem. Show brief working, then end with the line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
+You are a solving agent. Execute the given plan step by step
+on the problem. Show brief working, then end with the line:
+\texttt{FINAL ANSWER: \{answer\}}.
 
 \paragraph{Verifier (Direct).}
-\begin{quote}
-\textit{You are a verification agent. Check the proposed solution against the original problem. If correct, reply 'VERDICT: ACCEPT'. If you find an error, reply 'VERDICT: REJECT', explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
+You are a verification agent. Check the proposed
+solution against the original problem. If correct, reply
+\texttt{VERDICT: ACCEPT}. If you find an error, reply
+\texttt{VERDICT: REJECT}, explain the error in one sentence, and give a corrected
+line:
+\texttt{FINAL ANSWER: \{answer\}}.
 
 \paragraph{Verifier (Chain-of-Thought).}
-\begin{quote}
-\textit{You are a verification agent. Check the proposed solution against the original problem.\\
-First, write down your step-by-step verification reasoning (thinking out loud). In your reasoning:
-\begin{itemize}
-    \item Carefully read the original problem statement to identify all numerical inputs, constraints, and implicit/explicit assumptions.
-    \item Confirm if the proposed solution correctly read the problem and applied all necessary assumptions.
-    \item Verify the mathematical logic and calculations step-by-step.
-\end{itemize}
-Then, end your response with:\\
-VERDICT: ACCEPT (if the solution is correct)\\
-OR\\
-VERDICT: REJECT\\
-If you reject, explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
+You are a verification agent. Check the
+proposed solution against the original problem. First, write down your step-by-step
+verification reasoning. Carefully identify the problem inputs, assumptions,
+mathematical operations, and calculations. Then end your response with either
+\texttt{VERDICT: ACCEPT} if the solution is correct, or
+\texttt{VERDICT: REJECT} if it is not. If you reject, explain the error in one
+sentence and provide a corrected line:
+\texttt{FINAL ANSWER: \{answer\}}.
 
 \paragraph{Verifier (Rubric).}
-\begin{quote}
-\textit{You are a verification agent. Evaluate the proposed solution by systematically verifying these four items:
-\begin{enumerate}
-    \item Reading \& Assumptions: Did the solution correctly read the problem text, capture all conditions, and apply correct assumptions?
-    \item Variables: Are the numbers used from the question identical to the original problem?
-    \item Operations: Are the mathematical operations chosen (add/sub/mult/div) logically correct?
-    \item Calculations: Are the calculations mathematically correct?
-\end{enumerate}
-Write down your evaluation for each of the 4 points above.\\
-Then, end your response with:\\
-VERDICT: ACCEPT (if all checks pass)\\
-OR\\
-VERDICT: REJECT (if any check fails)\\
-If you reject, explain the error in one sentence, and provide a corrected line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
+You are a verification agent. Evaluate the proposed
+solution using four checks: (1) Reading \& Assumptions, (2) Variables,
+(3) Operations, and (4) Calculations. Write down your evaluation for each
+check. Then end with either \texttt{VERDICT: ACCEPT} if all checks pass, or
+\texttt{VERDICT: REJECT} if any check fails. If you reject, explain the error
+in one sentence and provide a corrected line:
+\texttt{FINAL ANSWER: \{answer\}}.
 
 \paragraph{Single agent.}
-\begin{quote}
-\textit{Solve the problem step by step. End with the line: \texttt{FINAL ANSWER: <answer>}.}
-\end{quote}
+Solve the problem step by step. End with the line:
+\texttt{FINAL ANSWER: \{answer\}}.
 
-\subsection*{B \quad Injection examples}
+\section*{B \quad Injection examples}
 
 \paragraph{Number swap.}
 \textbf{Number swap.}
@@ -873,39 +767,5 @@ splitting into groups.''
 ``Find the remaining amount after step 2, then compare it with the target.''
 $\rightarrow$ ``Compare the amount with the target before subtracting the
 intermediate cost.''
-
-\subsection*{C \quad Representative run trace}
-Below is a representative trace from our experimental runs (problem ID: \texttt{gsmhard-train-1209}), showing how a plan-stage number swap is propagated by the solver and subsequently corrected by the verifier:
-
-\paragraph{Problem.}
-\begin{quote}
-\textit{The local firefighters are doing a ``fill the boot'' fundraiser. Their goal is to raise \$3522385. After the first 3 hours, they have raised \$2100. For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?}
-\end{quote}
-
-\paragraph{Decomposer plan.}
-\begin{quote}
-\textit{1. Calculate the amount raised per hour by dividing \$2100 by 3 hours.\\
-2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
-\end{quote}
-
-\paragraph{Injected plan-stage fault (C1 condition - Number swap).}
-\begin{quote}
-\textit{1. Calculate the amount raised per hour by dividing \textbf{\$1890} by 3 hours.\\
-2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
-\end{quote}
-
-\paragraph{Solver execution.}
-\begin{quote}
-\textit{Step 1: Calculate the amount raised per hour: \$1890 $\div$ 3 = \$630 per hour.\\
-Step 2: Divide the total goal by the hourly rate: \$3,522,385 $\div$ \$630 = 5,591.88... Rounding up to complete the goal: 5,592 hours.\\
-FINAL ANSWER: 5592}
-\end{quote}
-
-\paragraph{Verifier verdict \& correction.}
-\begin{quote}
-\textit{The problem states they raised \$2100 in the first 3 hours, giving a rate of \$2100 $\div$ 3 = \$700 per hour. The proposed solution incorrectly uses \$1890 and \$630 per hour instead. The correct calculation is \$3,522,385 $\div$ \$700 = 5,031.978..., which rounds up to 5,032 hours.\\
-VERDICT: REJECT\\
-FINAL ANSWER: 5032}
-\end{quote}
 
 \end{document}
