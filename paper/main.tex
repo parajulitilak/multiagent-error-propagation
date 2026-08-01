@@ -910,4 +910,58 @@ VERDICT: REJECT\\
 FINAL ANSWER: 5032}
 \end{quote}
 
+\subsection*{D \quad Extended Fault Severity Analysis}
+
+Fault severity (mild, moderate, severe) plays a secondary role compared to the injection stage. For Claude Sonnet 4.6, solver-stage number-swap propagation is 0.0\% for mild, 18.8\% for moderate, and 7.7\% for severe errors under Direct verification. For Qwen 2.5 72B, propagation is 9.1\% for mild, 20.0\% for moderate, and 22.2\% for severe errors. Verifiers do not just catch fatal errors; mild and moderate swaps drop to 0.0\% propagation once CoT or Rubric verification is deployed. Table~\ref{tab:appendix_severity} shows the detailed breakdown across prompt strategies.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Direct}} & \multicolumn{2}{c}{\textbf{CoT}} & \multicolumn{2}{c}{\textbf{Rubric}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+\textbf{Model / Stratum} & \textbf{Stage} & Catch\% & Prop.\% & Catch\% & Prop.\% & Catch\% & Prop.\% \\
+\midrule
+\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6 (Number Swaps)}} \\
+Mild Severity     & Solver & 0.0\%  & 0.0\%  & 6.7\%  & 6.7\%  & 0.0\%  & 0.0\%  \\
+Moderate Severity & Solver & 18.8\% & 18.8\% & 0.0\%  & 0.0\%  & 6.7\%  & 6.7\%  \\
+Severe Severity   & Solver & 7.7\%  & 7.7\%  & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  \\
+\midrule
+\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct (Number Swaps)}} \\
+Mild Severity     & Solver & 9.1\%  & 9.1\%  & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  \\
+Moderate Severity & Solver & 20.0\% & 20.0\% & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  \\
+Severe Severity   & Solver & 22.2\% & 22.2\% & 9.1\%  & 9.1\%  & 0.0\%  & 0.0\%  \\
+\bottomrule
+\end{tabular}
+\caption{Verifier catch rate and propagation rate by fault severity stratum for number-swap injections ($n=200$).}\label{tab:appendix_severity}
+\end{table}
+
+\subsection*{E \quad Detailed Token Usage and Computational Cost}
+
+Moving from a single-agent baseline (Condition A) to a clean multi-agent pipeline (Condition B) increases token cost per solved problem by $3.1\times$ on Claude (526 to 1,616 tokens) and $2.2\times$ on Qwen (737 to 1,623 tokens). Using CoT or Rubric instead of Direct verification adds about 30\% to 50\% more tokens to the verifier stage itself, which elevates total token cost per problem by 23\% to 37\%. Table~\ref{tab:appendix_cost} lists the full breakdown.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Metric / Condition} & \textbf{Direct} & \textbf{CoT} & \textbf{Rubric} & \textbf{vs Direct} \\
+\midrule
+\multicolumn{5}{l}{\textbf{Claude Sonnet 4.6}} \\
+Single-agent (A)          & \multicolumn{3}{c}{526 tok/solved} & --- \\
+Clean pipeline (B)        & \multicolumn{3}{c}{1,616 tok/solved} & $+3.1\times$ vs A \\
+Avg C2 tok/problem        & 1,145 & 1,419 & 1,503 & CoT $+23.9\%$;\; Rubric $+31.3\%$ \\
+C2 tok/solved problem     & 1,892 & 2,027 & 2,163 & CoT $+7.1\%$;\; Rubric $+14.3\%$ \\
+C2 Verifier stage only    & 103,378 & 157,191 & 173,825 & CoT $+52.1\%$;\; Rubric $+68.1\%$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+Single-agent (A)          & \multicolumn{3}{c}{737 tok/solved} & --- \\
+Clean pipeline (B)        & \multicolumn{3}{c}{1,623 tok/solved} & $+2.2\times$ vs A \\
+Avg C2 tok/problem        & 1,063 & 1,460 & 1,383 & CoT $+37.4\%$;\; Rubric $+30.1\%$ \\
+C2 tok/solved problem     & 1,817 & 2,317 & 2,230 & CoT $+27.5\%$;\; Rubric $+22.7\%$ \\
+C2 Verifier stage only    & 84,165 & 164,977 & 148,567 & CoT $+96.0\%$;\; Rubric $+76.5\%$ \\
+\bottomrule
+\end{tabular}
+\caption{Detailed token cost breakdown by verifier prompting strategy under solver-injected condition C2 (GSM-Hard $n=200$).}\label{tab:appendix_cost}
+\end{table}
+
 \end{document}
