@@ -563,9 +563,9 @@ Removing the verifier agent (Condition D2) causes solver-stage fault propagation
 
 Under Direct verification, verifiers catch errors, yet frequently fail to fix them. Thus, this strategy yields 66.0\% correction precision on Claude and 85.9\% on Qwen. On the other hand, both Chain-of-Thought (CoT) and Rubric strategies increase correction precision to 95.9\%--100.0\% on Claude and 95.3\%--98.0\% on Qwen. Consequently, CoT and Rubric reduce solver-stage propagation to 1.4\% on Claude and 4.6\%--4.7\% on Qwen (Table~\ref{tab:strategy}).
 
-Unfortunately, this gain comes at the cost of a modest computational overhead; CoT and Rubric verifiers increase token usage by 30\%--50\%. Consequently, this elevates total token cost per problem by 23\%--37\%.
+Unfortunately, this gain comes at the cost of a modest computational overhead; CoT and Rubric verifiers increase token usage by 30\%--50\%. Consequently, this elevates total token cost per problem by 23\%--37\% (see Appendix~\ref{sec:appendix_cost} for full token breakdown).
 
-According to Table~\ref{tab:errortype}, verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen, and reducing propagation to near 0.0\%. Conversely, operation flips can be considered a blind spot across both models and all the prompt strategies used, as catch rates are below 15.0\%, showing no benefit from deploying a verifier. Number-swap errors fall between these extremes: Direct verification misses number swaps, but Rubric and CoT verification suppress their propagation to 0.0\% on Claude and Qwen.
+According to Table~\ref{tab:errortype}, verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen, and reducing propagation to near 0.0\%. Conversely, operation flips can be considered a blind spot across both models and all the prompt strategies used, as catch rates are below 15.0\%, showing no benefit from deploying a verifier. Number-swap errors fall between these extremes: Direct verification misses number swaps, but Rubric and CoT verification suppress their propagation to 0.0\% on Claude and Qwen (see Appendix~\ref{sec:appendix_severity} for severity stratification).
 
 \section{Analysis}
 
@@ -910,7 +910,7 @@ VERDICT: REJECT\\
 FINAL ANSWER: 5032}
 \end{quote}
 
-\subsection*{D \quad Extended Fault Severity Analysis}
+\subsection*{D \quad Extended Fault Severity Analysis}\label{sec:appendix_severity}
 
 Fault severity (mild, moderate, severe) plays a secondary role compared to the injection stage. For Claude Sonnet 4.6, solver-stage number-swap propagation is 0.0\% for mild, 18.8\% for moderate, and 7.7\% for severe errors under Direct verification. For Qwen 2.5 72B, propagation is 9.1\% for mild, 20.0\% for moderate, and 22.2\% for severe errors. Verifiers do not just catch fatal errors; mild and moderate swaps drop to 0.0\% propagation once CoT or Rubric verification is deployed. Table~\ref{tab:appendix_severity} shows the detailed breakdown across prompt strategies.
 
@@ -936,7 +936,7 @@ Severe Severity   & Solver & 22.2\% & 22.2\% & 9.1\%  & 9.1\%  & 0.0\%  & 0.0\% 
 \caption{Verifier catch rate and propagation rate by fault severity stratum for number-swap injections ($n=200$).}\label{tab:appendix_severity}
 \end{table}
 
-\subsection*{E \quad Detailed Token Usage and Computational Cost}
+\subsection*{E \quad Detailed Token Usage and Computational Cost}\label{sec:appendix_cost}
 
 Moving from a single-agent baseline (Condition A) to a clean multi-agent pipeline (Condition B) increases token cost per solved problem by $3.1\times$ on Claude (526 to 1,616 tokens) and $2.2\times$ on Qwen (737 to 1,623 tokens). Using CoT or Rubric instead of Direct verification adds about 30\% to 50\% more tokens to the verifier stage itself, which elevates total token cost per problem by 23\% to 37\%. Table~\ref{tab:appendix_cost} lists the full breakdown.
 
