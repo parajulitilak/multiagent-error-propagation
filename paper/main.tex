@@ -12,10 +12,13 @@
 % our own runs. Nothing pending may survive into a submitted version.
 % =========================================================================
 \documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta, positioning, calc}
 \usepackage{microtype} % NOTE: if a local build errors on font expansion, use [expansion=false]
@@ -29,11 +32,12 @@
 
 \title{\texorpdfstring{\huge\bfseries Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}{Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}}
 \author{
-\textbf{Tilak Parajuli}$^{1}$ \qquad
-\textbf{Johnny Kozman}$^{1}$ \qquad
-\textbf{Arushi Waddepalli}$^{1}$\\[1.2em]
+\textbf{Tilak Parajuli}$^{1,*}$ \qquad
+\textbf{Johnny Kozman}$^{1,*}$ \qquad
+\textbf{Arushi Waddepalli}$^{1,*}$\\[1.2em]
 $^{1}$SISTER, AI/ML Track \\
 Dubai Computer Science Society \& Delta Rising Foundation\\
+\small $^{*}$Contributed equally\\
 }
 \date{August 2026}
 
@@ -69,6 +73,7 @@ direct verifier to 95.9\% and 100.0\%, respectively. The result is a map of
 which verifier catches which error, where it was injected, and how fault type
 and severity interact with stage boundaries and verifier design. We release
 code, prompts, and full traces.
+\medskip\noindent\textbf{Keywords:} multi-agent systems, LLM pipelines, error propagation, fault injection, verification, chain-of-thought
 \end{abstract}
 
 \section{Introduction}
@@ -188,94 +193,34 @@ trace artifacts sufficient to reproduce the reported measurements.
 
 \section{Methods}
 
-\subsection{Pipeline under study}
-Let $x$ be a problem. The pipeline computes a plan $d = D(x)$, a solution
-$s = S(x, d)$, and a verdict $v = V(x, s)$; the final answer $\hat{y}$ is
-extracted from $s$ if the verifier accepts, or from the verifier's correction
-if it rejects. Each stage is a separate LLM call with its own role prompt
-(Appendix~A); the only information passed between stages is the text of the
-preceding artifact, mirroring common framework defaults. A single-agent
-baseline computes $\hat{y}$ from one call on $x$ alone.
+\subsection{Pipeline Architecture and Test Conditions}
+Our multi-agent system uses three specialized LLM agents working sequentially:
+\begin{enumerate}
+    \item \textbf{Decomposer:} Breaks down a word problem into a short 2--5 step plan without solving it.
+    \item \textbf{Solver:} Executes the plan step-by-step to compute the final numeric answer.
+    \item \textbf{Verifier:} Reviews the solution against the original problem and either accepts it or rejects it with a corrected answer.
+\end{enumerate}
 
-% Figure
+To isolate how errors propagate and how verifiers protect the pipeline, we test six experimental conditions on a fixed set of math problems (Table~\ref{tab:conditions}). Condition~A is a single-agent baseline. Condition~B is a clean multi-agent run. In Conditions~C1 and C2, we inject a controlled fault into the plan or solution before passing it to the next agent. Conditions~D1 and D2 repeat C1 and C2 with the verifier removed to measure baseline error propagation.
+
 \begin{figure}[t]
 \centering
-\resizebox{\linewidth}{!}{%
+\resizebox{0.9\linewidth}{!}{%
 \begin{tikzpicture}[
-    >=Latex,
-    font=\sffamily,
-    io/.style={
-        draw=gray!70!black,
-        fill=white,
-        rounded corners=8pt,
-        minimum width=2.5cm,
-        minimum height=1.4cm,
-        align=center,
-        line width=0.9pt
-    },
-    stage/.style 2 args={
-        draw=#1!70!black,
-        fill=#1!85,
-        rounded corners=10pt,
-        minimum width=3.2cm,
-        minimum height=2.3cm,
-        align=center,
-        text=white,
-        font=\bfseries\Large,
-        line width=1pt
-    },
-    artifact/.style={
-        rounded corners=10pt,
-        minimum width=3.5cm,
-        minimum height=1.05cm,
-        align=center,
-        fill=white,
-        line width=1pt,
-        font=\large
-    },
-    inj/.style={
-        circle,
-        draw=red!85!black,
-        dashed,
-        line width=1.2pt,
-        minimum size=13mm,
-        inner sep=0pt
-    },
-    flow/.style={->, line width=1.2pt, draw=black!85},
-    note/.style={font=\bfseries\large, text=red!85!black},
-    dottedlink/.style={dotted, line width=1.4pt}
+    >=Latex, font=\sffamily,
+    io/.style={draw=gray!70!black, fill=white, rounded corners=6pt, minimum width=2.2cm, minimum height=1.1cm, align=center},
+    stage/.style={draw=#1!70!black, fill=#1!85, rounded corners=8pt, minimum width=2.6cm, minimum height=1.6cm, align=center, text=white, font=\bfseries},
+    inj/.style={circle, draw=red!85!black, dashed, line width=1.1pt, minimum size=10mm},
+    flow/.style={->, line width=1.1pt, draw=black!85}
 ]
-
-% Main nodes
 \node[io] (problem) {Problem $x$};
+\node[stage=teal, right=1.2cm of problem] (decomp) {Decomposer};
+\node[inj, right=0.8cm of decomp] (inj1) {};
+\node[stage=orange, right=0.8cm of inj1] (solver) {Solver};
+\node[inj, right=0.8cm of solver] (inj2) {};
+\node[stage=green!60!black, right=0.8cm of inj2] (verifier) {Verifier};
+\node[io, right=1.2cm of verifier] (answer) {Final Answer $\hat{y}$};
 
-\node[stage={teal}{}, right=1.8cm of problem] (decomp) {Decomposer};
-
-\node[inj, right=1.1cm of decomp] (inj1) {};
-\draw[red!85!black, line width=1.3pt]
-    ($(inj1.center)+(0,0.34)$) --
-    ($(inj1.center)+(0.11,0.07)$) --
-    ($(inj1.center)+(0.01,0.07)$) --
-    ($(inj1.center)+(0.09,-0.20)$) --
-    ($(inj1.center)+(-0.10,-0.01)$) --
-    ($(inj1.center)+(-0.01,-0.01)$) -- cycle;
-
-\node[stage={orange}{}, right=1.1cm of inj1] (solver) {Solver};
-
-\node[inj, right=1.1cm of solver] (inj2) {};
-\draw[red!85!black, line width=1.3pt]
-    ($(inj2.center)+(0,0.34)$) --
-    ($(inj2.center)+(0.11,0.07)$) --
-    ($(inj2.center)+(0.01,0.07)$) --
-    ($(inj2.center)+(0.09,-0.20)$) --
-    ($(inj2.center)+(-0.10,-0.01)$) --
-    ($(inj2.center)+(-0.01,-0.01)$) -- cycle;
-
-\node[stage={green!60!black}{}, right=1.1cm of inj2] (verifier) {Verifier};
-
-\node[io, right=1.8cm of verifier] (answer) {Final answer $\hat{y}$};
-
-% Arrows
 \draw[flow] (problem) -- (decomp);
 \draw[flow] (decomp) -- (inj1);
 \draw[flow] (inj1) -- (solver);
@@ -283,294 +228,188 @@ baseline computes $\hat{y}$ from one call on $x$ alone.
 \draw[flow] (inj2) -- (verifier);
 \draw[flow] (verifier) -- (answer);
 
-% Artifact boxes
-\node[artifact, draw=teal!70!black, below=1.45cm of decomp] (plan) {plan $d = D(x)$};
-\node[artifact, draw=orange!80!black, below=1.45cm of solver] (soln) {solution $s = S(x,d)$};
-\node[artifact, draw=green!50!black, below=1.45cm of verifier] (verd) {verdict $v = V(x,s)$};
-
-\draw[dottedlink, teal!70!black] (decomp.south) -- (plan.north);
-\draw[dottedlink, orange!80!black] (solver.south) -- (soln.north);
-\draw[dottedlink, green!50!black] (verifier.south) -- (verd.north);
-
-% Injection labels
-\node[note, above=0.45cm of inj1] {C1 / D1};
-\node[note, above=0.45cm of inj2] {C2 / D2};
-
-% Legend
-\node[
-    draw=gray!60,
-    rounded corners=4pt,
-    fill=white,
-    minimum width=5.8cm,
-    minimum height=0.70cm,
-    anchor=north east,
-    font=\scriptsize
-] at ($(answer.south east)+(0,-3.95)$) (legendbox) {};
-
-\node[inj, minimum size=5mm] at ($(legendbox.west)+(0.45,0)$) (leginj) {};
-\draw[red!85!black, line width=0.7pt]
-    ($(leginj.center)+(0,0.14)$) --
-    ($(leginj.center)+(0.05,0.03)$) --
-    ($(leginj.center)+(0.01,0.03)$) --
-    ($(leginj.center)+(0.04,-0.08)$) --
-    ($(leginj.center)+(-0.05,-0.01)$) --
-    ($(leginj.center)+(-0.01,-0.01)$) -- cycle;
-
-\node[anchor=west, font=\normalsize] at ($(legendbox.west)+(0.85,0)$)
-{= controlled fault injection};
-
+\node[font=\bfseries\small, text=red!85!black, above=0.2cm of inj1] {C1 / D1};
+\node[font=\bfseries\small, text=red!85!black, above=0.2cm of inj2] {C2 / D2};
 \end{tikzpicture}
 }
-\caption{The Decomposer--Solver--Verifier pipeline with the two injection points marked.}
+\caption{The 3-agent pipeline with fault injection points C1 (plan) and C2 (solution).}
 \label{fig:pipeline}
 \end{figure}
 
-\subsection{Controlled fault injection}
-\label{sec:injection}
-An injector $\phi$ maps an artifact to a corrupted artifact and a record of
-the change. We use three operators chosen to mimic plausible reasoning
-failures in intermediate traces: \emph{number swap}, which replaces one
-quantity with a wrong value drawn from a severity-controlled multiplier set;
-\emph{operation flip}, which inverts one arithmetic operation word
-(\emph{add}$\leftrightarrow$\emph{subtract},
-\emph{multiply}$\leftrightarrow$\emph{divide}, and analogous pairs); and
-\emph{semantic logic error}, which rewrites a plan or solution to introduce a
-single logical reasoning flaw while preserving fluent surface form. List and
-step labels are excluded from number swap: corrupting ``Step 1'' changes no
-quantity, and admitting such perturbations would dilute the injected-fault
-population with harmless cases and bias propagation rates downward. Every
-injection logs the operator, the original and replacement spans, and the
-character position, so each downstream error is attributable to a specific,
-inspectable change.
-
-Number swaps are graded into three pre-registered severity levels by the
-realized relative size of the change after rounding: \emph{mild} (under a
-15\% change), \emph{moderate} (a 30--60\% change), and \emph{severe} (more
-than a 200\% change or a sign flip). The released configuration fixes the
-exact multiplier sets as mild $\{0.9, 1.1\}$, moderate
-$\{0.4, 0.6, 1.4, 1.6\}$, and severe $\{3.5, 4.0, \texttt{negate}\}$. If a
-requested severity band cannot be expressed for a given quantity (for
-example, small integers cannot realize a mild change after rounding), the
-injector escalates to the next valid level and records both the target and
-realized severity in the trace. Severity targets are cycled across the fixed
-sample so that number-swap injections remain balanced across mild, moderate,
-and severe cases.
-
-In condition C1 the injector is applied to the plan $d$ before the solver
-sees it; in C2, to the solution $s$ before the verifier sees it. Exactly one
-artifact is corrupted per run.
-
-\subsection{Conditions and design}
 \begin{table}[h]
 \centering\small
 \begin{tabular}{lccc}
 \toprule
-Condition & Pipeline & Injection & Verifier \\
+Condition & Pipeline & Injection Stage & Verifier Present \\
 \midrule
-A  & --         & --          & --          \\
-B  & \checkmark & --          & \checkmark  \\
-C1 & \checkmark & Decomposer  & \checkmark  \\
-C2 & \checkmark & Solver      & \checkmark  \\
-D1 & \checkmark & Decomposer  & --          \\
-D2 & \checkmark & Solver      & --          \\
+A  & Single Agent & None & No \\
+B  & 3-Agent Clean & None & Yes \\
+C1 & 3-Agent Pipeline & Decomposer (Plan) & Yes \\
+C2 & 3-Agent Pipeline & Solver (Solution) & Yes \\
+D1 & 2-Agent Ablation & Decomposer (Plan) & No \\
+D2 & 2-Agent Ablation & Solver (Solution) & No \\
 \bottomrule
 \end{tabular}
-\caption{Experimental conditions. Every condition runs on the same
-fixed problem sample (seeded), so all comparisons are paired at the problem
-level.}
+\caption{Experimental conditions evaluated across all problem samples.}
 \label{tab:conditions}
 \end{table}
 
-\subsection{Verifier prompt strategies}
+\subsection{Controlled Fault Injection}
+\label{sec:injection}
+To simulate realistic reasoning mistakes, we corrupt exactly one intermediate artifact per run using three fault types:
+\begin{itemize}
+    \item \textbf{Number Swap:} Replaces a number in the plan or solution with a wrong value, categorized into three severity tiers: \emph{mild} ($<15\%$ change), \emph{moderate} ($30\%$--$60\%$ change), or \emph{severe} ($>200\%$ change or sign flip).
+    \item \textbf{Operation Flip:} Swaps an arithmetic operation with its inverse (e.g., changing \emph{add} to \emph{subtract} or \emph{multiply} to \emph{divide}).
+    \item \textbf{Semantic Logic Error:} Rewrites the logical sequence of steps while keeping the language fluent.
+\end{itemize}
+
+\subsection{Verifier Prompt Strategies and Evaluation Setup}
 \label{sec:strategies}
-The verifier is the pipeline's final stage, and every run stores the exact
-problem and proposed solution the verifier receives. We compare three verifier
-prompt strategies on matched experimental conditions: V1, the direct verifier
-used in the main run; V2, a chain-of-thought verifier instructed to re-derive
-the solution before judging; and V3, a rubric verifier that checks an explicit
-list of failure points. Because the same problem sample, injection design, and
-condition structure are held fixed across strategies, differences in catch rate,
-correction rate, and propagation are attributable to verifier prompting rather
-than upstream pipeline variation.
+To test how prompt design affects verifier performance, we evaluate every run under three prompt strategies on identical traces:
+(1)~\textbf{Direct:} Emits an immediate accept/reject verdict and corrected line;
+(2)~\textbf{Chain-of-Thought (CoT):} Generates step-by-step verification reasoning before declaring a verdict; and
+(3)~\textbf{Rubric:} Systematically evaluates the solution against four explicit criteria (reading, variables, operations, calculations).
 
-\subsection{Outcome measures}
-For a problem the clean pipeline solves correctly, an injected fault has one
-of four fates: \emph{caught and corrected} (verifier rejects; final answer
-correct), \emph{caught but not corrected} (verifier rejects; final answer
-wrong), \emph{silently propagated} (verifier accepts; final answer wrong), or
-\emph{absorbed} (verifier accepts; final answer nevertheless correct, e.g.,
-the solver ignored the corrupted span). We report: accuracy per condition;
-\emph{propagation rate}, the fraction of valid injections whose final answer
-is wrong, restricted to problems condition B solved correctly so that new
-errors are attributable to the injection; \emph{catch rate} and
-\emph{correction rate} of the verifier, overall and stratified by error type,
-severity, and prompt strategy; and cost per solved problem in tokens.
+Every injected fault results in one of four outcomes: \emph{caught and corrected}, \emph{caught but wrong correction}, \emph{silently propagated}, or \emph{absorbed} (the solver naturally corrected the plan mistake).
 
-\subsection{Statistical analysis}
-All condition contrasts use McNemar's exact test on paired
-correct/incorrect outcomes~\citep{dietterich1998approximate}, the appropriate
-test when two systems answer the same items. Accuracies carry 95\%
-percentile-bootstrap intervals (10{,}000 resamples); rates carry Wilson
-score intervals. The effects of injection position, fault type, and verifier
-strategy on fault survival are estimated by logistic regression, reported as
-odds ratios. Because several contrasts are tested, $p$-values are
-Holm--Bonferroni corrected~\citep{dror2018hitchhiker}. Main runs use
-temperature~0 on a fixed seeded sample; robustness replications use
-temperature~0.7 over three seeds, reported as mean and interval.
-
-\subsection{Setup and reproducibility}
-Main experiments use Claude Sonnet 4.6 with temperature 0 for the primary
-runs and 0.7 for robustness replications; cross-model replications use Qwen
-2.5 72B Instruct under the same condition design. The main dataset is
-GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
-held fixed, with operators and severity levels as in
-\S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~A. Total API cost: \sim\$28. All configuration is specified through released YAML
-files in the repository, and the analysis scripts regenerate the reported
-condition-level, verifier-strategy, and model-comparison results from the
-released traces.
+\paragraph{Experimental Setup.} Experiments are conducted on $n=200$ GSM-Hard math problems using Claude Sonnet 4.6 (primary) and Qwen 2.5 72B Instruct (replication) at temperature 0. Condition comparisons use McNemar's exact test with Holm--Bonferroni correction ($p_{\mathrm{holm}}$). Prompts are listed in Appendix~\ref{sec:appendix_prompts}.
 
 \section{Results}
 
-\textbf{Does the pipeline beat one agent?} Figure~\ref{fig:acc} compares
-conditions A and B on the Claude Sonnet 4.6 GSM-Hard run. The clean
-multi-agent pipeline (B) reaches 69.5\% accuracy, compared with 65.5\% for
-the single-agent baseline (A), a modest improvement that does not remain
-significant after Holm correction ($p_{\mathrm{holm}} = 0.0645$). The result
-suggests that decomposition and verification can improve end-to-end
-performance, but the gain is smaller than the downstream effects of fault
-injection and verifier ablation.
+The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and matches it on Qwen 2.5 72B (62.5\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance (Table~\ref{tab:conditions_results}, Figure~\ref{fig:acc}).
 
-\textbf{What happens to an injected fault?} Figure~\ref{fig:fate} gives the
-error-fate breakdown for C1 and C2. Plan-stage faults (C1) are usually
-absorbed before they reach the output: among 139 valid injections, 125 are
-absorbed without verifier intervention, only 3 silently propagate, and 7 are
-caught and corrected. Solver-stage faults (C2) are much more dangerous:
-among 139 valid injections, only 90 are absorbed, 31 are caught and corrected,
-16 are caught but not corrected, and 2 silently propagate. In other words,
-the verifier becomes far more active when the corruption is inserted at the
-solver stage.
+\begin{table}[H]
+\centering\small
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Cond.} & \textbf{Description} & \textbf{Accuracy} & \textbf{95\% CI} & \textbf{Prop. Rate} & \textbf{$p_{\mathrm{holm}}$ vs B} \\
+\midrule
+\multicolumn{6}{l}{\textbf{Claude Sonnet 4.6}} \\
+A  & Single-agent baseline          & 65.5\% & [59.0, 72.0] & ---   & 0.0645 \\
+B  & Clean pipeline                 & 69.5\% & [63.0, 76.0] & ---   & ---    \\
+C1 & Plan injected + verifier       & 66.5\% & [60.0, 73.0] & 5.0\% & 0.1406 \\
+C2 & Solver injected + verifier     & 60.5\% & [54.0, 67.0] & 12.9\% & ---   \\
+D1 & Plan injected, no verifier     & 64.5\% & [58.0, 71.0] & 8.6\%  & ---   \\
+D2 & Solver injected, no verifier   & 51.5\% & [44.5, 58.5] & 27.3\% & ---   \\
+\midrule
+\multicolumn{6}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+A  & Single-agent baseline          & 62.5\% & [56.0, 69.5] & ---   & 1.0000 \\
+B  & Clean pipeline                 & 62.5\% & [56.0, 69.0] & ---   & ---    \\
+C1 & Plan injected + verifier       & 62.5\% & [56.0, 69.5] & 4.0\% & 1.0000 \\
+C2 & Solver injected + verifier     & 58.5\% & [51.5, 65.0] & 11.2\% & ---   \\
+D1 & Plan injected, no verifier     & 61.0\% & [54.5, 67.5] & 8.7\%  & ---   \\
+D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
+\midrule
+\multicolumn{6}{l}{\textit{Verifier ablation (C vs D), Holm-corrected McNemar:}} \\
+\multicolumn{6}{l}{Claude C1:D1 $p=0.4240$; C2:D2 $p=0.0382$ \qquad Qwen C1:D1 $p=1.0000$; C2:D2 $p=0.0781$} \\
+\bottomrule
+\end{tabular}
+\caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Propagation rate is computed over the problems correctly solved by the clean pipeline (B).}\label{tab:conditions_results}
+\end{table}
 
-\textbf{Does position matter?} Yes. Propagation is substantially higher for
-solver-stage injection than for plan-stage injection under the direct verifier:
-12.9\% in C2 versus 5.0\% in C1. The logistic model reports an odds ratio of
-0.28 for the early-stage coefficient ($p = 0.0084$), indicating that
-plan-stage faults are significantly less likely to survive than solver-stage
-faults. This pattern is consistent with the qualitative trace evidence: the
-solver often re-derives or corrects corrupted plans, whereas corrupted solver
-outputs sit directly at the boundary where the verifier must detect and repair
-them.
-
-\textbf{Does severity matter?} Severity effects are visible but are weaker
-than stage and verifier-strategy effects in the current number-swap results.
-For Claude under the direct verifier, plan-stage number-swap propagation is
-11.1\% for mild faults, 5.9\% for moderate faults, and 6.7\% for severe
-faults; solver-stage number-swap propagation is 0.0\%, 18.8\%, and 7.7\%
-for mild, moderate, and severe faults, respectively. The main takeaway is not
-a simple monotonic severity gradient, but that severity interacts with stage
-and downstream correction dynamics rather than determining propagation on its
-own.
-
-\textbf{What does the verifier contribute?} The verifier's causal contribution
-is clearest at the solver stage. Under direct prompting, removing the verifier
-raises propagation from 12.9\% in C2 to 27.3\% in D2, and this contrast is
-significant after Holm correction ($p_{\mathrm{holm}} = 0.0382$). By contrast,
-the plan-stage comparison is much smaller: propagation rises from 5.0\% in C1
-to 8.6\% in D1, and the C1 versus D1 contrast is not significant
-($p_{\mathrm{holm}} = 0.4240$). These ablations show that the verifier matters
-most when the corruption is inserted late, after the solver has already
-produced a flawed final reasoning trace.
-
-\textbf{Which verifier catches what?} Verifier strategy strongly affects
-downstream outcomes. On Claude, solver-stage propagation under the direct
-verifier is 12.9\%, but falls to 1.4\% under both chain-of-thought and
-rubric prompting. Correction precision rises from 66.0\% under the direct
-verifier to 95.9\% under chain-of-thought and 100.0\% under rubric prompting.
-Plan-stage propagation also improves, dropping from 5.0\% under the direct
-verifier to 1.4\% and 2.1\% under chain-of-thought and rubric prompting,
-respectively. The resulting strategy map shows that direct verification often
-detects faults but fails during repair, whereas chain-of-thought and rubric
-verifiers are substantially better at converting detection into correct final
-answers.
-
-\begin{figure}[t]\centering
+\begin{figure}[H]\centering
 \includegraphics[width=0.85\linewidth]{fig2_acc.png}
 \caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
 \end{figure}
 
-\begin{figure}[t]\centering
+\subsection*{RQ1: How do planning vs. execution errors propagate, and does removing the verifier increase failure?}
+
+To begin with, injections in the planner agent (Condition C1) propagate to the final output only in 5.0\% of the cases on Claude and in 4.0\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). In contrast, solver-stage injections (Condition C2) propagate at 12.9\% on Claude and 11.2\% on Qwen—more than double the plan-stage rate (Claude OR = 0.28, $p = 0.0084$; Qwen OR = 0.35, $p = 0.0515$).
+
+\begin{figure}[H]\centering
 \includegraphics[width=0.85\linewidth]{fig3_acc.png}
 \caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
 \end{figure}
 
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{lcccccc}
+Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 12.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} = 0.0382$) and from 11.2\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.0781$). In contrast, removing the verifier for plan-stage injections (Condition D1) only slightly increases propagation to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.4240$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), confirming that verifiers provide minimal additional benefit at the planning stage. In other words, verifier agents provide a strong defense against late-stage execution errors, while planning errors are largely self-corrected by intermediate agents before reaching the verification steps.
+
+\subsection*{RQ2: What are the effects of various verifier prompting strategies to catch errors with different levels of severity?}
+
+Under Direct verification, verifiers catch errors, yet frequently fail to fix them. Thus, this strategy yields 66.0\% correction precision on Claude and 85.9\% on Qwen. On the other hand, both Chain-of-Thought (CoT) and Rubric strategies increase correction precision to 95.9\%--100.0\% on Claude and 95.3\%--98.0\% on Qwen. Consequently, CoT and Rubric reduce solver-stage propagation to 1.4\% on Claude and 4.6\%--4.7\% on Qwen (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead; CoT and Rubric verifiers increase token usage by 30\%--50\%. Consequently, this elevates total token cost per problem by 23\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} for full token breakdowns).
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{llcccccc}
 \toprule
-& \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
-\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
-\textbf{Condition / Stratum} & Catch \% & Correct \% & Catch \% & Correct \% & Catch \% & Correct \% \\
+& & \multicolumn{2}{c}{\textbf{Direct}} & \multicolumn{2}{c}{\textbf{CoT}} & \multicolumn{2}{c}{\textbf{Rubric}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+\textbf{Stage} & \textbf{Metric} & Catch\% & Corr.\% & Catch\% & Corr.\% & Catch\% & Corr.\% \\
 \midrule
-\textbf{Plan Injected ($C_1$)} & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
-\textbf{Solver Injected ($C_2$)} & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
+\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
+\textbf{Plan ($C_1$)} & Overall & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
+& Prop. Rate & \multicolumn{2}{c}{5.0\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{2.1\%} \\
+\textbf{Solver ($C_2$)} & Overall & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
+& Prop. Rate & \multicolumn{2}{c}{12.9\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{1.4\%} \\
 \midrule
-\textbf{Mild Severity} & 0.0\% & 0.0\% & 6.7\% & 50.0\% & 0.0\% & 0.0\% \\
-\textbf{Moderate Severity} & 18.8\% & 50.0\% & 0.0\% & 0.0\% & 6.7\% & 100.0\% \\
-\textbf{Severe Severity} & 7.7\% & 50.0\% & 0.0\% & 0.0\% & 0.0\% & 0.0\% \\
+\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+\textbf{Plan ($C_1$)} & Overall & 8.8\% & 54.5\% & 5.4\% & 57.1\% & 2.4\% & 33.3\% \\
+& Prop. Rate & \multicolumn{2}{c}{4.0\%} & \multicolumn{2}{c}{3.1\%} & \multicolumn{2}{c}{3.9\%} \\
+\textbf{Solver ($C_2$)} & Overall & 62.4\% & 85.9\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
+& Prop. Rate & \multicolumn{2}{c}{11.2\%} & \multicolumn{2}{c}{4.6\%} & \multicolumn{2}{c}{4.7\%} \\
 \bottomrule
 \end{tabular}
-\caption{Verifier catch rate and correction precision by prompt strategy, injection position, and fault severity (Claude Sonnet 4.6, $n=200$).}\label{tab:map}
+\caption{Verifier catch rate, correction precision, and propagation rate by prompt strategy and injection stage (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:strategy}
+\end{table}
+
+According to Table~\ref{tab:errortype}, verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen, and reducing propagation to near 0.0\%. Conversely, operation flips can be considered a blind spot across both models and all the prompt strategies used, as catch rates are below 15.0\%, showing no benefit from deploying a verifier. Number-swap errors fall between these extremes: Direct verification misses number swaps, but Rubric and CoT verification suppress their propagation to 0.0\% on Claude and Qwen (see Appendix~\ref{sec:appendix_answers} for severity sensitivity and Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_errortype} for master report matrices).
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Direct}} & \multicolumn{2}{c}{\textbf{CoT}} & \multicolumn{2}{c}{\textbf{Rubric}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+\textbf{Error Type} & \textbf{Stage} & Catch\% & Prop.\% & Catch\% & Prop.\% & Catch\% & Prop.\% \\
+\midrule
+\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
+Number swap    & Plan   & 4.9\%  & 2.4\%  & 5.3\%  & 0.0\%  & 4.1\%  & 0.0\%  \\
+Number swap    & Solver & 19.6\% & 4.3\%  & 19.6\% & 0.0\%  & 24.4\% & 2.2\%  \\
+Operation flip & Plan   & 0.0\%  & 2.6\%  & 0.0\%  & 2.9\%  & 0.0\%  & 4.8\%  \\
+Operation flip & Solver & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  & 2.1\%  & 2.1\%  \\
+Semantic logic & Plan   & 15.0\% & 3.3\%  & 17.0\% & 2.1\%  & 14.3\% & 2.0\%  \\
+Semantic logic & Solver & 82.6\% & 4.3\%  & 88.9\% & 2.2\%  & 83.0\% & 0.0\%  \\
+\midrule
+\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+Number swap    & Plan   & 8.6\%  & 8.6\%  & 4.5\%  & 2.3\%  & 4.3\%  & 4.3\%  \\
+Number swap    & Solver & 86.4\% & 29.5\% & 23.5\% & 2.9\%  & 80.0\% & 0.0\%  \\
+Operation flip & Plan   & 4.9\%  & 0.0\%  & 2.6\%  & 0.0\%  & 2.8\%  & 2.8\%  \\
+Operation flip & Solver & 13.2\% & 5.3\%  & 0.0\%  & 0.0\%  & 2.2\%  & 0.0\%  \\
+Semantic logic & Plan   & 14.0\% & 8.0\%  & 8.5\%  & 6.4\%  & 0.0\%  & 4.4\%  \\
+Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \\
+\bottomrule
+\end{tabular}
+\caption{Verifier catch rate and propagation rate by error type, injection stage, and prompt strategy (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:errortype}
 \end{table}
 
 \section{Analysis}
-The traces reveal three recurring mechanisms. First, many plan-stage faults are
-silently absorbed before they reach the final answer: the solver often notices
-that the corrupted plan conflicts with the original problem statement and
-re-derives the correct computation from the problem text. Second, solver-stage
-faults are much harder to absorb because they appear in the last reasoning
-artifact before verification; in these cases, the verifier becomes the main
-line of defense. Third, verifier success depends not only on detection but also
-on correction quality: the direct verifier often identifies that a solution is
-wrong but sometimes introduces a new arithmetic slip while repairing it,
-whereas chain-of-thought and rubric prompting substantially improve correction
-precision. Taken together, the traces suggest that stage boundaries act as
-semantic filters, that execution-stage errors are the most dangerous, and that
-verifier prompting strategy mainly matters when a fault survives long enough to
-require active downstream repair.
 
-The severity and strategy patterns sharpen this picture. Mild and moderate
-number swaps are often absorbed at the planning stage, but solver-stage faults,
-especially semantic logic errors, propagate far more readily when the verifier
-is weak or absent. The causal ablation comparisons show that verifier benefit
-is largest for solver-stage errors and much smaller for plan-stage errors,
-where natural solver absorption already provides substantial protection. Across
-both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct, chain-of-thought and rubric
-verifiers consistently reduce harmful propagation relative to the direct
-verifier, indicating that verifier reasoning structure matters most when
-correction rather than detection is the bottleneck.
+Qualitative trace inspection reveals two primary mechanisms governing verifier behavior and failure modes across the pipeline.
+
+\subsection*{Post-Hoc Correction Drift in Direct Verification}
+Direct verification suffers from a clear structural bottleneck: high error detection paired with poor repair accuracy. Under Direct prompting, verifiers correctly identify flawed solver outputs but frequently blunder the repair step, introducing secondary arithmetic slips when generating the corrected final answer line. Because Direct prompts force the model to emit a single-pass verdict and answer without a computational scratchpad, the model relies on unconstrained generation for correction. Chain-of-Thought and Rubric prompting eliminate this drift by forcing the verifier to construct a step-by-step derivation before emitting the final answer, driving correction precision from 66.0\% to 100.0\%.
+
+\subsection*{Label-Reasoning Dissociation}
+A more subtle failure mode is \emph{label-reasoning dissociation}, where the verifier's written critique explicitly identifies the injected fault yet the final verdict token reads \texttt{VERDICT: ACCEPT}. For example, trace audits reveal instances where the verifier notes in prose that a step used an incorrect value, but nevertheless approves the overall solution. This dissociation breaks the implicit assumption that reasoning traces causally drive final verdicts. Structured Rubric prompting mitigates this dissociation by forcing the model to explicitly state pass/fail labels for individual evaluation criteria prior to emitting its overall verdict.
 
 \section{Conclusion}
-This study shows that error propagation in multi-agent LLM pipelines is not
-uniform. Faults injected at the planning stage are often absorbed naturally by
-the solver, whereas faults injected at the execution stage survive far more
-often unless a verifier catches and correctly repairs them. Verifier prompting
-strategy matters sharply: direct verifiers detect many failures but make more
-bad corrections, while chain-of-thought and rubric verifiers greatly improve
-correction precision and reduce final propagation. For practitioners, the main
-implication is that verification budget is most valuable at the solver-to-
-verifier boundary and that structured verifier prompts are preferable when
-correction quality matters. More broadly, the results suggest that the
-reliability of agent pipelines depends not only on whether a verifier exists,
-but on where faults arise and how the verifier is instructed to reason about
-them.
+Errors do not travel equally across an agent pipeline. When a planner makes a mistake, the solver usually fixes it on its own by reading the original question. In fact, intermediate solvers absorb over 90\% of plan-stage errors across both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct. Because of this self-correction, adding a verifier after the planner provides little value. It reduces final error propagation by only 3\%--4\% (from 8.6\% D1 to 5.0\% C1 on Claude, and 8.7\% D1 to 4.0\% C1 on Qwen).
 
-\paragraph{Broader impact.} Agent pipelines increasingly mediate consequential
-work. Measuring where errors survive, and how much verification actually
-helps, informs where guardrails belong; we do not foresee direct misuse
-enabled by these measurements.
+Solver errors are a completely different story. Mistakes made during execution pass straight to the final answer unless a verifier catches them. Here, adding a verifier cuts final pipeline failure in half (from 27.3\% D2 down to 12.9\% C2 on Claude, and 25.4\% D2 to 11.2\% C2 on Qwen).
 
-\paragraph{Reproducibility.} Code, prompts, configuration, and full traces: \newline
+Prompt design matters immensely. Simple direct verifiers spot errors easily, but they frequently blunder the repair step. This happens because single-pass prompts force the model to guess a fix without scratchpad reasoning. Requiring Chain-of-Thought or Rubric verification solves this problem completely. It forces step-by-step evaluation before outputting a verdict token, boosting repair accuracy to 95\%--100\% and suppressing final error propagation to 1\%--4\%.
+
+One major vulnerability remains. Simple operation flips---such as swapping \emph{add} for \emph{subtract}---act as a blind spot across all models and prompt styles, yielding catch rates below 15.0\%.
+
+Our findings suggest three practical rules for building multi-agent systems:
+\begin{enumerate}
+    \item \textbf{Verify execution, not planning:} Place verifiers at the solver stage where errors actually survive.
+    \item \textbf{Mandate structured prompts:} Require step-by-step reasoning (Chain-of-Thought or Rubric) so verifiers do not ruin their corrections.
+    \item \textbf{Add symbolic safeguards:} Pair LLM verifiers with programmatic math checks to catch operation flips that language models miss.
+\end{enumerate}
+
+\paragraph{Broader Impact.} Agent pipelines increasingly handle real-world tasks. Pinpointing where errors survive helps developers place guardrails effectively; we do not foresee direct misuse arising from these findings.
+
+\paragraph{Reproducibility.} Code, prompts, configuration, and full traces are available at: \newline
 \href{https://github.com/parajulitilak/multiagent-error-propagation}{\textcolor{blue}{\texttt{github.com/parajulitilak/multiagent-error-propagation}}}.
 
 \section{Improvements}
@@ -593,7 +432,10 @@ tightening the solver prompt's plan adherence, so that plan-stage faults are
 not absorbed by silent re-derivation and the planning-stage estimate is
 sharpened; comparing a small verifier fine-tuned with QLoRA~\citep{dettmers2023qlora}
 on the released traces against the LLM judge, to test whether low-cost
-specialized oversight can match it; and evaluating learned inter-agent
+specialized oversight can match it; investigating dynamic verifier gating
+(e.g., only invoking the more expensive chain-of-thought or rubric verifiers
+when the solver expresses high uncertainty) to optimize the token cost budget;
+and evaluating learned inter-agent
 gating in the style of DebUnc~\citep{yoffe2024debunc} under our injection
 protocol, which would connect the measurement in this paper to the
 mitigation literature it motivates.
@@ -612,10 +454,9 @@ pre-registered contrast family~\citep{dror2018hitchhiker}. \emph{External
 validity}: results cover one primary reasoning dataset with objectively
 checkable answers and two model families; replication on both Claude Sonnet
 4.6 and Qwen 2.5 72B Instruct tests whether the observed propagation
-patterns depend on a single model. Robustness replications at temperature
-0.7 across three seeds are supported by the released harness, though the
-main conclusions in this paper are drawn from the deterministic primary
-runs. Conclusions are stated only where these checks agree.
+patterns depend on a single model. All conclusions in this paper are drawn
+from these deterministic primary runs (temperature 0) and are stated only where the outcomes
+across both model families agree.
 
 \begin{thebibliography}{99}
 
@@ -749,53 +590,64 @@ Minfeng Qi, Huajie Chen, and Wanlei Zhou.
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 
-\section*{A \quad Role prompts}
+\section{Role Prompts}\label{sec:appendix_prompts}
 
 \paragraph{Decomposer.}
- You are a planning agent. Break the problem into a short
-numbered plan of 2--5 concrete steps with any intermediate quantities needed.
-Do not solve it. Output only the plan.
+\begin{quote}
+\textit{You are a planning agent. Break the problem into a short numbered plan of 2-5 concrete steps with any intermediate quantities needed. Do NOT solve it. Output only the plan.}
+\end{quote}
 
 \paragraph{Solver.}
-You are a solving agent. Execute the given plan step by step
-on the problem. Show brief working, then end with the line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a solving agent. Execute the given plan step by step on the problem. Show brief working, then end with the line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Verifier (Direct).}
-You are a verification agent. Check the proposed
-solution against the original problem. If correct, reply
-\texttt{VERDICT: ACCEPT}. If you find an error, reply
-\texttt{VERDICT: REJECT}, explain the error in one sentence, and give a corrected
-line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a verification agent. Check the proposed solution against the original problem. If correct, reply 'VERDICT: ACCEPT'. If you find an error, reply 'VERDICT: REJECT', explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Verifier (Chain-of-Thought).}
-You are a verification agent. Check the
-proposed solution against the original problem. First, write down your step-by-step
-verification reasoning. Carefully identify the problem inputs, assumptions,
-mathematical operations, and calculations. Then end your response with either
-\texttt{VERDICT: ACCEPT} if the solution is correct, or
-\texttt{VERDICT: REJECT} if it is not. If you reject, explain the error in one
-sentence and provide a corrected line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a verification agent. Check the proposed solution against the original problem.\\
+First, write down your step-by-step verification reasoning (thinking out loud). In your reasoning:
+\begin{itemize}
+    \item Carefully read the original problem statement to identify all numerical inputs, constraints, and implicit/explicit assumptions.
+    \item Confirm if the proposed solution correctly read the problem and applied all necessary assumptions.
+    \item Verify the mathematical logic and calculations step-by-step.
+\end{itemize}
+Then, end your response with:\\
+VERDICT: ACCEPT (if the solution is correct)\\
+OR\\
+VERDICT: REJECT\\
+If you reject, explain the error in one sentence, and give a corrected line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Verifier (Rubric).}
-You are a verification agent. Evaluate the proposed
-solution using four checks: (1) Reading \& Assumptions, (2) Variables,
-(3) Operations, and (4) Calculations. Write down your evaluation for each
-check. Then end with either \texttt{VERDICT: ACCEPT} if all checks pass, or
-\texttt{VERDICT: REJECT} if any check fails. If you reject, explain the error
-in one sentence and provide a corrected line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{You are a verification agent. Evaluate the proposed solution by systematically verifying these four items:
+\begin{enumerate}
+    \item Reading \& Assumptions: Did the solution correctly read the problem text, capture all conditions, and apply correct assumptions?
+    \item Variables: Are the numbers used from the question identical to the original problem?
+    \item Operations: Are the mathematical operations chosen (add/sub/mult/div) logically correct?
+    \item Calculations: Are the calculations mathematically correct?
+\end{enumerate}
+Write down your evaluation for each of the 4 points above.\\
+Then, end your response with:\\
+VERDICT: ACCEPT (if all checks pass)\\
+OR\\
+VERDICT: REJECT (if any check fails)\\
+If you reject, explain the error in one sentence, and provide a corrected line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
 \paragraph{Single agent.}
-Solve the problem step by step. End with the line:
-\texttt{FINAL ANSWER: \{answer\}}.
+\begin{quote}
+\textit{Solve the problem step by step. End with the line: \texttt{FINAL ANSWER: <answer>}.}
+\end{quote}
 
-\section*{B \quad Injection examples}
+\section{Injection Examples}\label{sec:appendix_injections}
 
 \paragraph{Number swap.}
-\textbf{Number swap.}
 ``Step 1: add 45 and 12.'' $\rightarrow$ ``Step 1: add 76 and 12.''
 (step labels unchanged).
 
@@ -804,7 +656,6 @@ Solve the problem step by step. End with the line:
 ``Compute 250 $\times$ 0.2.'' $\rightarrow$ ``Compute 150 $\times$ 0.2.''
 
 \paragraph{Operation flip.}
-\textbf{Operation flip.}
 ``Multiply the total by 3.'' $\rightarrow$ ``Divide the total by 3.''
 
 ``Add the shipping cost at the end.'' $\rightarrow$ ``Subtract the shipping
@@ -814,7 +665,6 @@ cost at the end.''
 the time.''
 
 \paragraph{Semantic logic error.}
-\textbf{Semantic logic error.}
 ``Use the discounted price first, then add the service fee.''
 $\rightarrow$ ``Add the service fee first, then apply the discount to the total.''
 
@@ -826,5 +676,198 @@ splitting into groups.''
 ``Find the remaining amount after step 2, then compare it with the target.''
 $\rightarrow$ ``Compare the amount with the target before subtracting the
 intermediate cost.''
+
+\section{Representative Run Trace}\label{sec:appendix_trace}
+Below is a representative trace from our experimental runs (problem ID: \texttt{gsmhard-train-1209}), showing how a plan-stage number swap is propagated by the solver and subsequently corrected by the verifier:
+
+\paragraph{Problem.}
+\begin{quote}
+\textit{The local firefighters are doing a ``fill the boot'' fundraiser. Their goal is to raise \$3522385. After the first 3 hours, they have raised \$2100. For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?}
+\end{quote}
+
+\paragraph{Decomposer plan.}
+\begin{quote}
+\textit{1. Calculate the amount raised per hour by dividing \$2100 by 3 hours.\\
+2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
+\end{quote}
+
+\paragraph{Injected plan-stage fault (C1 condition - Number swap).}
+\begin{quote}
+\textit{1. Calculate the amount raised per hour by dividing \textbf{\$1890} by 3 hours.\\
+2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
+\end{quote}
+
+\paragraph{Solver execution.}
+\begin{quote}
+\textit{Step 1: Calculate the amount raised per hour: \$1890 $\div$ 3 = \$630 per hour.\\
+Step 2: Divide the total goal by the hourly rate: \$3,522,385 $\div$ \$630 = 5,591.88... Rounding up to complete the goal: 5,592 hours.\\
+FINAL ANSWER: 5592}
+\end{quote}
+
+\paragraph{Verifier verdict \& correction.}
+\begin{quote}
+\textit{The problem states they raised \$2100 in the first 3 hours, giving a rate of \$2100 $\div$ 3 = \$700 per hour. The proposed solution incorrectly uses \$1890 and \$630 per hour instead. The correct calculation is \$3,522,385 $\div$ \$700 = 5,031.978..., which rounds up to 5,032 hours.\\
+VERDICT: REJECT\\
+FINAL ANSWER: 5032}
+\end{quote}
+
+\section{Master Experimental Reports}\label{sec:appendix_reports}
+
+This appendix presents the full master experimental reports and data tables across all conditions, models (Claude Sonnet 4.6 and Qwen 2.5 72B Instruct), injection types, severity levels, and prompt strategies (GSM-Hard $n=200$).
+
+\subsection{Master Verifier Strategy Performance}
+Table~\ref{tab:master_strategy} summarizes the verifier catch rate and correction precision broken down by prompt strategy, injection position, and fault severity level across both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Condition / Stratum} & Catch \% & Correct \% & Catch \% & Correct \% & Catch \% & Correct \% \\
+\midrule
+\multicolumn{7}{l}{\textbf{Claude Sonnet 4.6}} \\
+Plan Injected ($C_1$)    & 7.9\%  & 63.6\% & 7.9\%  & 90.9\% & 6.4\%  & 88.9\% \\
+Solver Injected ($C_2$)  & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
+Mild Severity (Number Swaps)     & 0.0\%  & 0.0\%  & 6.7\%  & 50.0\% & 0.0\%  & 0.0\% \\
+Moderate Severity (Number Swaps) & 18.8\% & 50.0\% & 0.0\%  & 0.0\%  & 6.7\%  & 100.0\% \\
+Severe Severity (Number Swaps)   & 7.7\%  & 50.0\% & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\% \\
+\midrule
+\multicolumn{7}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+Plan Injected ($C_1$)    & 8.8\%  & 54.5\% & 5.4\%  & 57.1\% & 2.4\%  & 33.3\% \\
+Solver Injected ($C_2$)  & 62.4\% & 85.9\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
+Mild Severity (Number Swaps)     & 9.1\%  & 77.8\% & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\% \\
+Moderate Severity (Number Swaps) & 20.0\% & 58.3\% & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\% \\
+Severe Severity (Number Swaps)   & 22.2\% & 64.7\% & 9.1\%  & 100.0\%& 0.0\%  & 0.0\% \\
+\bottomrule
+\end{tabular}
+\caption{Master verifier catch rate and correction precision by prompt strategy, injection position, and fault severity ($n=200$).}\label{tab:master_strategy}
+\end{table}
+
+\begin{sidewaystable}[p]
+\centering\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcccccccccc}
+\toprule
+& & \multicolumn{3}{c}{\textbf{Direct Strategy}} & \multicolumn{3}{c}{\textbf{Chain-of-Thought}} & \multicolumn{3}{c}{\textbf{Rubric Strategy}} \\
+\cmidrule(lr){3-5} \cmidrule(lr){6-8} \cmidrule(lr){9-11}
+\textbf{Error Type} & \textbf{Stage} & Catch\% & Corr\% & Prop\% & Catch\% & Corr\% & Prop\% & Catch\% & Corr\% & Prop\% & Ablated Prop\% \\
+\midrule
+\multicolumn{12}{l}{\textbf{Claude Sonnet 4.6}} \\
+Number swap    & Plan   & 4.9\%  & 100\% & 2.4\% & 5.3\%  & 100\% & 0.0\% & 4.1\%  & 100\% & 0.0\% & 9.5\% \\
+Number swap    & Solver & 19.6\% & 100\% & 4.3\% & 19.6\% & 100\% & 0.0\% & 24.4\% & 100\% & 2.2\% & 12.2\% \\
+Operation flip & Plan   & 0.0\%  & 0\%   & 2.6\% & 0.0\%  & 0\%   & 2.9\% & 0.0\%  & 0\%   & 4.8\% & 2.4\% \\
+Operation flip & Solver & 0.0\%  & 0\%   & 0.0\% & 0.0\%  & 0\%   & 0.0\% & 2.1\%  & 100\% & 2.1\% & 0.0\% \\
+Semantic logic & Plan   & 15.0\% & 88.9\%& 3.3\% & 17.0\% & 87.5\%& 2.1\% & 14.3\% & 85.7\%& 2.0\% & 12.5\% \\
+Semantic logic & Solver & 82.6\% & 94.7\%& 4.3\% & 88.9\% & 97.5\%& 2.2\% & 83.0\% & 100\% & 0.0\% & 80.0\% \\
+\midrule
+\multicolumn{12}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+Number swap    & Plan   & 8.6\%  & 0.0\% & 8.6\% & 4.5\%  & 50.0\%& 2.3\% & 4.3\%  & 50.0\%& 4.3\% & 5.4\% \\
+Number swap    & Solver & 86.4\% & 65.8\%& 29.5\%& 23.5\% & 100\% & 2.9\% & 80.0\% & 100\% & 0.0\% & 7.1\% \\
+Operation flip & Plan   & 4.9\%  & 100\% & 0.0\% & 2.6\%  & 100\% & 0.0\% & 2.8\%  & 0.0\% & 2.8\% & 11.1\% \\
+Operation flip & Solver & 13.2\% & 60.0\%& 5.3\% & 0.0\%  & 0.0\% & 0.0\% & 2.2\%  & 100\% & 0.0\% & 2.1\% \\
+Semantic logic & Plan   & 14.0\% & 42.9\%& 8.0\% & 8.5\%  & 50.0\%& 6.4\% & 0.0\%  & 0.0\% & 4.4\% & 9.4\% \\
+Semantic logic & Solver & 81.8\% & 94.4\%& 11.4\%& 82.4\% & 97.6\%& 9.8\% & 73.8\% & 90.3\%& 14.3\%& 77.8\% \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Master causal error defense matrix by error type, injection stage, and prompt strategy ($n=200$).}\label{tab:master_errortype}
+\end{sidewaystable}
+
+\begin{table}[h]
+\centering\small
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Metric / Condition} & \textbf{Direct Strategy} & \textbf{Chain-of-Thought} & \textbf{Rubric Strategy} & \textbf{vs Direct} \\
+\midrule
+\multicolumn{5}{l}{\textbf{Claude Sonnet 4.6}} \\
+Single-agent (A)          & \multicolumn{3}{c}{526 tok/solved} & --- \\
+Clean pipeline (B)        & \multicolumn{3}{c}{1,616 tok/solved} & $+3.1\times$ vs A \\
+Avg C2 tok/problem        & 1,145 & 1,419 & 1,503 & CoT $+23.9\%$;\; Rubric $+31.3\%$ \\
+C2 tok/solved problem     & 1,892 & 2,027 & 2,163 & CoT $+7.1\%$;\; Rubric $+14.3\%$ \\
+C2 Verifier stage only    & 103,378 & 157,191 & 173,825 & CoT $+52.1\%$;\; Rubric $+68.1\%$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+Single-agent (A)          & \multicolumn{3}{c}{737 tok/solved} & --- \\
+Clean pipeline (B)        & \multicolumn{3}{c}{1,623 tok/solved} & $+2.2\times$ vs A \\
+Avg C2 tok/problem        & 1,063 & 1,460 & 1,383 & CoT $+37.4\%$;\; Rubric $+30.1\%$ \\
+C2 tok/solved problem     & 1,817 & 2,317 & 2,230 & CoT $+27.5\%$;\; Rubric $+22.7\%$ \\
+C2 Verifier stage only    & 84,165 & 164,977 & 148,567 & CoT $+96.0\%$;\; Rubric $+76.5\%$ \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Master token usage and computational cost breakdown across pipeline conditions and prompt strategies (GSM-Hard $n=200$).}\label{tab:master_cost}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+\textbf{Contrast} & \textbf{Evaluated Aspect} & Pairs ($n_{01}, n_{10}$) & $p_{\mathrm{holm}}$ & Pairs ($n_{01}, n_{10}$) & $p_{\mathrm{holm}}$ & Pairs ($n_{01}, n_{10}$) & $p_{\mathrm{holm}}$ \\
+\midrule
+\multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
+$A:B$   & Single vs Clean        & ($+9, -1$) & 0.0645 & ($+10, -2$) & 0.0771 & ($+9, -0$) & 0.0078 \\
+$B:C_1$ & Clean vs Plan Sabotage & ($+1, -7$) & 0.1406 & ($+2, -2$)  & 1.0000 & ($+2, -3$) & 1.0000 \\
+$C_1:D_1$ & Plan Verifier Protection & ($+5, -9$) & 0.4240 & ($+2, -12$) & 0.0388 & ($+0, -10$)& 0.0059 \\
+$C_2:D_2$ & Solver Verifier Protection & ($+13, -31$) & 0.0382 & ($+2, -39$) & 0.0000 & ($+1, -37$)& 0.0000 \\
+\midrule
+\multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
+$A:B$   & Single vs Clean        & ($+7, -7$) & 1.0000 & ($+10, -5$) & 0.6035 & ($+7, -5$) & 1.0000 \\
+$B:C_1$ & Clean vs Plan Sabotage & ($+5, -5$) & 1.0000 & ($+3, -4$)  & 1.0000 & ($+1, -5$) & 0.6562 \\
+$C_1:D_1$ & Plan Verifier Protection & ($+7, -10$) & 1.0000 & ($+4, -11$) & 0.3554 & ($+7, -8$) & 1.0000 \\
+$C_2:D_2$ & Solver Verifier Protection & ($+13, -29$) & 0.0781 & ($+7, -32$) & 0.0003 & ($+8, -31$)& 0.0012 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Full exact McNemar paired significance tests with Holm-Bonferroni adjusted $p$-values ($n=200$).}\label{tab:mcnemar_master}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Direct Strategy}} & \multicolumn{2}{c}{\textbf{Chain-of-Thought}} & \multicolumn{2}{c}{\textbf{Rubric Strategy}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Predictor Variable} & OR [95\% CI] & $p$-value & OR [95\% CI] & $p$-value & OR [95\% CI] & $p$-value \\
+\midrule
+\multicolumn{7}{l}{\textbf{Claude Sonnet 4.6 ($n=252$)}} \\
+Early Stage (Plan) & 0.28 [0.11, 0.72] & 0.0084 & 1.00 [0.14, 7.31] & 0.9974 & 1.60 [0.26, 9.83] & 0.6094 \\
+Operation Flip     & 0.13 [0.02, 1.09] & 0.0596 & 1.24 [0.08, 20.45] & 0.8783 & 3.29 [0.34, 32.37] & 0.3066 \\
+Semantic Logic     & 2.52 [0.97, 6.54] & 0.0571 & 2.27 [0.20, 25.46] & 0.5072 & 0.98 [0.06, 15.98] & 0.9909 \\
+\midrule
+\multicolumn{7}{l}{\textbf{Qwen 2.5 72B Instruct ($n=252$)}} \\
+Early Stage (Plan) & 0.35 [0.12, 1.01] & 0.0515 & 0.66 [0.18, 2.44] & 0.5282 & 0.77 [0.23, 2.66] & 0.6833 \\
+Operation Flip     & 0.09 [0.01, 0.76] & 0.0263 & 0.00 [0.00, $\infty$] & 0.9992 & 0.51 [0.05, 5.78] & 0.5892 \\
+Semantic Logic     & 0.69 [0.25, 1.87] & 0.4642 & 3.27 [0.67, 15.92] & 0.1427 & 4.24 [0.87, 20.58] & 0.0732 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Multivariable logistic regression odds ratios (OR) for fault survival ($n=252$).}\label{tab:logit_master}
+\end{table}
+
+\clearpage
+
+\section{Answers to Omitted Research Sub-Questions}\label{sec:appendix_answers}
+
+This appendix provides concise, point-form answers to the specific secondary research sub-questions that were streamlined out of the main text.
+
+\subsection{Fault Severity \& Sensitivity Dynamics}
+\begin{itemize}
+    \item \textbf{Injection Stage Dominance:} The injection stage (planning vs. execution) is the primary determinant of fault propagation. Fault severity (mild, moderate, severe) plays a secondary, non-monotonic role.
+    \item \textbf{Direct Verifier Sensitivity:} Under Direct verification, verifiers exhibit noisy sensitivity to numerical slip magnitude (e.g., solver-stage number-swap propagation on Claude is 0.0\% for mild, 18.8\% for moderate, and 7.7\% for severe; on Qwen, 9.1\% mild, 20.0\% moderate, 22.2\% severe).
+    \item \textbf{Structured Verifier Neutralization:} Deploying Chain-of-Thought (CoT) or Rubric verification neutralizes numerical severity effects, suppressing propagation for both mild and moderate number swaps to \textbf{0.0\%} across models (Table~\ref{tab:master_strategy}).
+\end{itemize}
+
+\subsection{Computational Overhead of Structured Verification}
+\begin{itemize}
+    \item \textbf{Multi-Agent Baseline Overhead:} Moving from a single-agent baseline (Condition A) to a clean multi-agent pipeline (Condition B) increases total token cost per solved problem by \textbf{$3.1\times$} on Claude (526 to 1,616 tokens) and \textbf{$2.2\times$} on Qwen (737 to 1,623 tokens).
+    \item \textbf{Verifier Stage Overhead:} Structured prompting (CoT and Rubric) increases token consumption at the verifier stage by \textbf{30\%--50\%} relative to Direct verification.
+    \item \textbf{Pipeline Token Overhead:} Because verification represents only one stage of the pipeline, CoT and Rubric prompting add only a modest \textbf{23\%--37\%} total token cost per problem (Table~\ref{tab:master_cost}).
+\end{itemize}
 
 \end{document}

@@ -85,21 +85,25 @@ assumption is the missing step.
 We close that gap experimentally. Because each fault is planted by us, ground
 truth about the origin of every downstream failure is known by construction,
 turning ``agents sometimes fail'' into a measurable, attributable quantity.
-This study aims to answer three specific research questions:
+This study aims to answer four specific research questions:
 \begin{itemize}
-    \item \textbf{RQ1 (Propagation and Severity):} How often do injected
-    faults survive to the final answer, and how does error severity
-    (mild/moderate/severe) change the survival rate? Do verifiers only
-    catch fatal errors, or are they sensitive to subtle slips?
-    \item \textbf{RQ2 (Verifier Strategy):} How does verifier prompt
-    strategy (direct vs chain-of-thought vs rubric) affect catch and
-    correction rates across different error types and severities?
-    \item \textbf{RQ3 (The Map):} How do injection stage (Decomposer vs
-    Solver) and the presence of a verifier (ablation) interact with error
-    type, severity, and verifier strategy to determine catch rates? A full
-    map is produced identifying which verifier catches which error, where
-    it was injected, how severe it was, and isolating the causal
-    contribution of the verification stage.
+    \item \textbf{RQ1 (Error Propagation \& Position):} How often do injected
+    faults propagate to the final output, and does this survival rate differ when
+    errors are introduced in the planning stage (Decomposer) versus the execution
+    stage (Solver)?
+    \item \textbf{RQ2 (Severity \& Sensitivity):} How does error severity
+    (mild, moderate, severe) affect downstream propagation? Do verifiers only
+    catch severe, fatal errors, or are they sensitive to subtle numerical slips?
+    \item \textbf{RQ3 (Prompting Strategies \& Efficiency):} How do Direct,
+    Chain-of-Thought (CoT), and Rubric prompting strategies compare in catch rate,
+    verifier correction precision, and propagation control? What is the token cost
+    overhead associated with more structured prompting? Does the relative advantage
+    of each prompting strategy vary depending on fault type (number swap, operation
+    flip, semantic logic error) and severity (mild, moderate, severe)?
+    \item \textbf{RQ4 (Causal Map \& Error Types):} How do verifier presence
+    (ablation) and prompt strategy interact with specific error types (number swaps,
+    operation flips, and semantic logic errors)? Which verifier configuration is
+    best suited for catching each type of reasoning failure?
 \end{itemize}
 
 The design meets the program's stated criteria directly: public data with
