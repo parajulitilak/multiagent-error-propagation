@@ -275,9 +275,8 @@ Every injected fault results in one of four outcomes: \emph{caught and corrected
 
 \section{Results}
 
-% ---------------------------------------------------------------
-% TABLE 1 — Condition-level accuracy and propagation (RQ1)
-% ---------------------------------------------------------------
+The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and matches it on Qwen 2.5 72B (62.5\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance (Table~\ref{tab:conditions_results}, Figure~\ref{fig:acc}).
+
 \begin{table}[t]
 \centering\small
 \begin{tabular}{llcccc}
@@ -307,25 +306,26 @@ D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
 \caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Propagation rate is computed over the problems correctly solved by the clean pipeline (B).}\label{tab:conditions_results}
 \end{table}
 
-% ---------------------------------------------------------------
-% FIGURE 1 — Accuracy by condition
-% ---------------------------------------------------------------
 \begin{figure}[t]\centering
 \includegraphics[width=0.85\linewidth]{fig2_acc.png}
 \caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
 \end{figure}
 
-% ---------------------------------------------------------------
-% FIGURE 2 — Fault fate breakdown
-% ---------------------------------------------------------------
+\subsection*{RQ1: How do planning vs. execution errors propagate, and does removing the verifier increase failure?}
+
+To begin with, injections in the planner agent (Condition C1) propagate to the final output only in 5.0\% of the cases on Claude and in 4.0\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). In contrast, solver-stage injections (Condition C2) propagate at 12.9\% on Claude and 11.2\% on Qwen—more than double the plan-stage rate (Claude OR = 0.28, $p = 0.0084$; Qwen OR = 0.35, $p = 0.0515$).
+
 \begin{figure}[t]\centering
 \includegraphics[width=0.85\linewidth]{fig3_acc.png}
 \caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
 \end{figure}
 
-% ---------------------------------------------------------------
-% TABLE 2 — Strategy catch/correction/propagation
-% ---------------------------------------------------------------
+Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 12.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} = 0.0382$) and from 11.2\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.0781$). In contrast, removing the verifier for plan-stage injections (Condition D1) only slightly increases propagation to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.4240$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), confirming that verifiers provide minimal additional benefit at the planning stage. In other words, verifier agents provide a strong defense against late-stage execution errors, while planning errors are largely self-corrected by intermediate agents before reaching the verification steps.
+
+\subsection*{RQ2: What are the effects of various verifier prompting strategies to catch errors with different levels of severity?}
+
+Under Direct verification, verifiers catch errors, yet frequently fail to fix them. Thus, this strategy yields 66.0\% correction precision on Claude and 85.9\% on Qwen. On the other hand, both Chain-of-Thought (CoT) and Rubric strategies increase correction precision to 95.9\%--100.0\% on Claude and 95.3\%--98.0\% on Qwen. Consequently, CoT and Rubric reduce solver-stage propagation to 1.4\% on Claude and 4.6\%--4.7\% on Qwen (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead; CoT and Rubric verifiers increase token usage by 30\%--50\%. Consequently, this elevates total token cost per problem by 23\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} for full token breakdowns).
+
 \begin{table}[t]
 \centering\small
 \begin{tabular}{llcccccc}
@@ -350,9 +350,8 @@ D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
 \caption{Verifier catch rate, correction precision, and propagation rate by prompt strategy and injection stage (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:strategy}
 \end{table}
 
-% ---------------------------------------------------------------
-% TABLE 3 — Error-type catch/propagation map
-% ---------------------------------------------------------------
+According to Table~\ref{tab:errortype}, verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen, and reducing propagation to near 0.0\%. Conversely, operation flips can be considered a blind spot across both models and all the prompt strategies used, as catch rates are below 15.0\%, showing no benefit from deploying a verifier. Number-swap errors fall between these extremes: Direct verification misses number swaps, but Rubric and CoT verification suppress their propagation to 0.0\% on Claude and Qwen (see Appendix~\ref{sec:appendix_answers} for severity sensitivity and Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_errortype} for master report matrices).
+
 \begin{table}[t]
 \centering\small
 \begin{tabular}{llcccccc}
@@ -380,20 +379,6 @@ Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \
 \end{tabular}
 \caption{Verifier catch rate and propagation rate by error type, injection stage, and prompt strategy (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:errortype}
 \end{table}
-
-The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and matches it on Qwen 2.5 72B (62.5\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance.
-
-\subsection*{RQ1: How do planning vs. execution errors propagate, and does removing the verifier increase failure?}
-
-To begin with, injections in the planner agent (Condition C1) propagate to the final output only in 5.0\% of the cases on Claude and in 4.0\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). In contrast, solver-stage injections (Condition C2) propagate at 12.9\% on Claude and 11.2\% on Qwen—more than double the plan-stage rate (Claude OR = 0.28, $p = 0.0084$; Qwen OR = 0.35, $p = 0.0515$).
-
-Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 12.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} = 0.0382$) and from 11.2\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.0781$). In contrast, removing the verifier for plan-stage injections (Condition D1) only slightly increases propagation to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.4240$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), confirming that verifiers provide minimal additional benefit at the planning stage. In other words, verifier agents provide a strong defense against late-stage execution errors, while planning errors are largely self-corrected by intermediate agents before reaching the verification steps.
-
-\subsection*{RQ2: What are the effects of various verifier prompting strategies to catch errors with different levels of severity?}
-
-Under Direct verification, verifiers catch errors, yet frequently fail to fix them. Thus, this strategy yields 66.0\% correction precision on Claude and 85.9\% on Qwen. On the other hand, both Chain-of-Thought (CoT) and Rubric strategies increase correction precision to 95.9\%--100.0\% on Claude and 95.3\%--98.0\% on Qwen. Consequently, CoT and Rubric reduce solver-stage propagation to 1.4\% on Claude and 4.6\%--4.7\% on Qwen (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead; CoT and Rubric verifiers increase token usage by 30\%--50\%. Consequently, this elevates total token cost per problem by 23\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} for full token breakdowns).
-
-According to Table~\ref{tab:errortype}, verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen, and reducing propagation to near 0.0\%. Conversely, operation flips can be considered a blind spot across both models and all the prompt strategies used, as catch rates are below 15.0\%, showing no benefit from deploying a verifier. Number-swap errors fall between these extremes: Direct verification misses number swaps, but Rubric and CoT verification suppress their propagation to 0.0\% on Claude and Qwen (see Appendix~\ref{sec:appendix_answers} for severity sensitivity and Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_errortype} for master report matrices).
 
 \section{Analysis}
 
