@@ -192,94 +192,34 @@ trace artifacts sufficient to reproduce the reported measurements.
 
 \section{Methods}
 
-\subsection{Pipeline under study}
-Let $x$ be a problem. The pipeline computes a plan $d = D(x)$, a solution
-$s = S(x, d)$, and a verdict $v = V(x, s)$; the final answer $\hat{y}$ is
-extracted from $s$ if the verifier accepts, or from the verifier's correction
-if it rejects. Each stage is a separate LLM call with its own role prompt
-(Appendix~\ref{sec:appendix_prompts}); the only information passed between stages is the text of the
-preceding artifact, mirroring common framework defaults. A single-agent
-baseline computes $\hat{y}$ from one call on $x$ alone.
+\subsection{Pipeline Architecture and Test Conditions}
+Our multi-agent system uses three specialized LLM agents working sequentially:
+\begin{enumerate}
+    \item \textbf{Decomposer:} Breaks down a word problem into a short 2--5 step plan without solving it.
+    \item \textbf{Solver:} Executes the plan step-by-step to compute the final numeric answer.
+    \item \textbf{Verifier:} Reviews the solution against the original problem and either accepts it or rejects it with a corrected answer.
+\end{enumerate}
 
-% Figure
+To isolate how errors propagate and how verifiers protect the pipeline, we test six experimental conditions on a fixed set of math problems (Table~\ref{tab:conditions}). Condition~A is a single-agent baseline. Condition~B is a clean multi-agent run. In Conditions~C1 and C2, we inject a controlled fault into the plan or solution before passing it to the next agent. Conditions~D1 and D2 repeat C1 and C2 with the verifier removed to measure baseline error propagation.
+
 \begin{figure}[t]
 \centering
-\resizebox{\linewidth}{!}{%
+\resizebox{0.9\linewidth}{!}{%
 \begin{tikzpicture}[
-    >=Latex,
-    font=\sffamily,
-    io/.style={
-        draw=gray!70!black,
-        fill=white,
-        rounded corners=8pt,
-        minimum width=2.5cm,
-        minimum height=1.4cm,
-        align=center,
-        line width=0.9pt
-    },
-    stage/.style 2 args={
-        draw=#1!70!black,
-        fill=#1!85,
-        rounded corners=10pt,
-        minimum width=3.2cm,
-        minimum height=2.3cm,
-        align=center,
-        text=white,
-        font=\bfseries\Large,
-        line width=1pt
-    },
-    artifact/.style={
-        rounded corners=10pt,
-        minimum width=3.5cm,
-        minimum height=1.05cm,
-        align=center,
-        fill=white,
-        line width=1pt,
-        font=\large
-    },
-    inj/.style={
-        circle,
-        draw=red!85!black,
-        dashed,
-        line width=1.2pt,
-        minimum size=13mm,
-        inner sep=0pt
-    },
-    flow/.style={->, line width=1.2pt, draw=black!85},
-    note/.style={font=\bfseries\large, text=red!85!black},
-    dottedlink/.style={dotted, line width=1.4pt}
+    >=Latex, font=\sffamily,
+    io/.style={draw=gray!70!black, fill=white, rounded corners=6pt, minimum width=2.2cm, minimum height=1.1cm, align=center},
+    stage/.style={draw=#1!70!black, fill=#1!85, rounded corners=8pt, minimum width=2.6cm, minimum height=1.6cm, align=center, text=white, font=\bfseries},
+    inj/.style={circle, draw=red!85!black, dashed, line width=1.1pt, minimum size=10mm},
+    flow/.style={->, line width=1.1pt, draw=black!85}
 ]
-
-% Main nodes
 \node[io] (problem) {Problem $x$};
+\node[stage=teal, right=1.2cm of problem] (decomp) {Decomposer};
+\node[inj, right=0.8cm of decomp] (inj1) {};
+\node[stage=orange, right=0.8cm of inj1] (solver) {Solver};
+\node[inj, right=0.8cm of solver] (inj2) {};
+\node[stage=green!60!black, right=0.8cm of inj2] (verifier) {Verifier};
+\node[io, right=1.2cm of verifier] (answer) {Final Answer $\hat{y}$};
 
-\node[stage={teal}{}, right=1.8cm of problem] (decomp) {Decomposer};
-
-\node[inj, right=1.1cm of decomp] (inj1) {};
-\draw[red!85!black, line width=1.3pt]
-    ($(inj1.center)+(0,0.34)$) --
-    ($(inj1.center)+(0.11,0.07)$) --
-    ($(inj1.center)+(0.01,0.07)$) --
-    ($(inj1.center)+(0.09,-0.20)$) --
-    ($(inj1.center)+(-0.10,-0.01)$) --
-    ($(inj1.center)+(-0.01,-0.01)$) -- cycle;
-
-\node[stage={orange}{}, right=1.1cm of inj1] (solver) {Solver};
-
-\node[inj, right=1.1cm of solver] (inj2) {};
-\draw[red!85!black, line width=1.3pt]
-    ($(inj2.center)+(0,0.34)$) --
-    ($(inj2.center)+(0.11,0.07)$) --
-    ($(inj2.center)+(0.01,0.07)$) --
-    ($(inj2.center)+(0.09,-0.20)$) --
-    ($(inj2.center)+(-0.10,-0.01)$) --
-    ($(inj2.center)+(-0.01,-0.01)$) -- cycle;
-
-\node[stage={green!60!black}{}, right=1.1cm of inj2] (verifier) {Verifier};
-
-\node[io, right=1.8cm of verifier] (answer) {Final answer $\hat{y}$};
-
-% Arrows
 \draw[flow] (problem) -- (decomp);
 \draw[flow] (decomp) -- (inj1);
 \draw[flow] (inj1) -- (solver);
@@ -287,162 +227,51 @@ baseline computes $\hat{y}$ from one call on $x$ alone.
 \draw[flow] (inj2) -- (verifier);
 \draw[flow] (verifier) -- (answer);
 
-% Artifact boxes
-\node[artifact, draw=teal!70!black, below=1.45cm of decomp] (plan) {plan $d = D(x)$};
-\node[artifact, draw=orange!80!black, below=1.45cm of solver] (soln) {solution $s = S(x,d)$};
-\node[artifact, draw=green!50!black, below=1.45cm of verifier] (verd) {verdict $v = V(x,s)$};
-
-\draw[dottedlink, teal!70!black] (decomp.south) -- (plan.north);
-\draw[dottedlink, orange!80!black] (solver.south) -- (soln.north);
-\draw[dottedlink, green!50!black] (verifier.south) -- (verd.north);
-
-% Injection labels
-\node[note, above=0.45cm of inj1] {C1 / D1};
-\node[note, above=0.45cm of inj2] {C2 / D2};
-
-% Legend
-\node[
-    draw=gray!60,
-    rounded corners=4pt,
-    fill=white,
-    minimum width=5.8cm,
-    minimum height=0.70cm,
-    anchor=north east,
-    font=\scriptsize
-] at ($(answer.south east)+(0,-3.95)$) (legendbox) {};
-
-\node[inj, minimum size=5mm] at ($(legendbox.west)+(0.45,0)$) (leginj) {};
-\draw[red!85!black, line width=0.7pt]
-    ($(leginj.center)+(0,0.14)$) --
-    ($(leginj.center)+(0.05,0.03)$) --
-    ($(leginj.center)+(0.01,0.03)$) --
-    ($(leginj.center)+(0.04,-0.08)$) --
-    ($(leginj.center)+(-0.05,-0.01)$) --
-    ($(leginj.center)+(-0.01,-0.01)$) -- cycle;
-
-\node[anchor=west, font=\normalsize] at ($(legendbox.west)+(0.85,0)$)
-{= controlled fault injection};
-
+\node[font=\bfseries\small, text=red!85!black, above=0.2cm of inj1] {C1 / D1};
+\node[font=\bfseries\small, text=red!85!black, above=0.2cm of inj2] {C2 / D2};
 \end{tikzpicture}
 }
-\caption{The Decomposer--Solver--Verifier pipeline with the two injection points marked.}
+\caption{The 3-agent pipeline with fault injection points C1 (plan) and C2 (solution).}
 \label{fig:pipeline}
 \end{figure}
 
-\subsection{Controlled fault injection}
-\label{sec:injection}
-An injector $\phi$ maps an artifact to a corrupted artifact and a record of
-the change. We use three operators chosen to mimic plausible reasoning
-failures in intermediate traces: \emph{number swap}, which replaces one
-quantity with a wrong value drawn from a severity-controlled multiplier set;
-\emph{operation flip}, which inverts one arithmetic operation word
-(\emph{add}$\leftrightarrow$\emph{subtract},
-\emph{multiply}$\leftrightarrow$\emph{divide}, and analogous pairs); and
-\emph{semantic logic error}, which rewrites a plan or solution to introduce a
-single logical reasoning flaw while preserving fluent surface form. Programmatically,
-number swaps and operation flips are executed rule-based via regular expression matching,
-while semantic logic errors are generated dynamically via a separate LLM call using a
-dedicated fault-injection prompt. List and
-step labels are excluded from number swap: corrupting ``Step 1'' changes no
-quantity, and admitting such perturbations would dilute the injected-fault
-population with harmless cases and bias propagation rates downward.
-
-Every injection logs the operator, the original and replacement spans, and the
-character position, so each downstream error is attributable to a specific,
-inspectable change.
-
-Number swaps are graded into three pre-registered severity levels by the
-realized relative size of the change after rounding: \emph{mild} (under a
-15\% change), \emph{moderate} (a 30--60\% change), and \emph{severe} (more
-than a 200\% change or a sign flip). The released configuration fixes the
-exact multiplier sets as mild $\{0.9, 1.1\}$, moderate
-$\{0.4, 0.6, 1.4, 1.6\}$, and severe $\{3.5, 4.0, \texttt{negate}\}$. If a
-requested severity band cannot be expressed for a given quantity (for
-example, small integers cannot realize a mild change after rounding), the
-injector escalates to the next valid level and records both the target and
-realized severity in the trace. Severity targets are cycled across the fixed
-sample so that number-swap injections remain balanced across mild, moderate,
-and severe cases.
-
-In condition C1 the injector is applied to the plan $d$ before the solver
-sees it; in C2, to the solution $s$ before the verifier sees it. Exactly one
-artifact is corrupted per run.
-
-\subsection{Conditions and design}
 \begin{table}[h]
 \centering\small
 \begin{tabular}{lccc}
 \toprule
-Condition & Pipeline & Injection & Verifier \\
+Condition & Pipeline & Injection Stage & Verifier Present \\
 \midrule
-A  & --         & --          & --          \\
-B  & \checkmark & --          & \checkmark  \\
-C1 & \checkmark & Decomposer  & \checkmark  \\
-C2 & \checkmark & Solver      & \checkmark  \\
-D1 & \checkmark & Decomposer  & --          \\
-D2 & \checkmark & Solver      & --          \\
+A  & Single Agent & None & No \\
+B  & 3-Agent Clean & None & Yes \\
+C1 & 3-Agent Pipeline & Decomposer (Plan) & Yes \\
+C2 & 3-Agent Pipeline & Solver (Solution) & Yes \\
+D1 & 2-Agent Ablation & Decomposer (Plan) & No \\
+D2 & 2-Agent Ablation & Solver (Solution) & No \\
 \bottomrule
 \end{tabular}
-\caption{Experimental conditions. Every condition runs on the same
-fixed problem sample (seeded), so all comparisons are paired at the problem
-level.}
+\caption{Experimental conditions evaluated across all problem samples.}
 \label{tab:conditions}
 \end{table}
 
-\subsection{Verifier prompt strategies}
+\subsection{Controlled Fault Injection}
+\label{sec:injection}
+To simulate realistic reasoning mistakes, we corrupt exactly one intermediate artifact per run using three fault types:
+\begin{itemize}
+    \item \textbf{Number Swap:} Replaces a number in the plan or solution with a wrong value, categorized into three severity tiers: \emph{mild} ($<15\%$ change), \emph{moderate} ($30\%$--$60\%$ change), or \emph{severe} ($>200\%$ change or sign flip).
+    \item \textbf{Operation Flip:} Swaps an arithmetic operation with its inverse (e.g., changing \emph{add} to \emph{subtract} or \emph{multiply} to \emph{divide}).
+    \item \textbf{Semantic Logic Error:} Rewrites the logical sequence of steps while keeping the language fluent.
+\end{itemize}
+
+\subsection{Verifier Prompt Strategies and Evaluation Setup}
 \label{sec:strategies}
-The verifier is the pipeline's final stage, and every run stores the exact
-problem and proposed solution the verifier receives. We compare three verifier
-prompt strategies on matched experimental conditions: \emph{V1} (Direct, represented
-as \texttt{direct} in the codebase), the baseline direct verifier used in our main
-runs; \emph{V2} (Chain-of-Thought, represented as \texttt{cot}), a chain-of-thought
-verifier instructed to generate step-by-step reasoning before outputting a verdict;
-and \emph{V3} (Rubric, represented as \texttt{rubric}), a rubric verifier that
-systematically evaluates the solution against four explicit checks (reading and assumptions, variables,
-operations, and calculations). Because the same problem sample, injection design, and
-condition structure are held fixed across strategies, differences in catch rate,
-correction rate, and propagation are attributable to verifier prompting rather
-than upstream pipeline variation.
+To test how prompt design affects verifier performance, we evaluate every run under three prompt strategies on identical traces:
+(1)~\textbf{Direct:} Emits an immediate accept/reject verdict and corrected line;
+(2)~\textbf{Chain-of-Thought (CoT):} Generates step-by-step verification reasoning before declaring a verdict; and
+(3)~\textbf{Rubric:} Systematically evaluates the solution against four explicit criteria (reading, variables, operations, calculations).
 
-\subsection{Outcome measures}
-For a problem the clean pipeline solves correctly, an injected fault has one
-of four fates: \emph{caught and corrected} (verifier rejects; final answer
-correct), \emph{caught but not corrected} (verifier rejects; final answer
-wrong), \emph{silently propagated} (verifier accepts; final answer wrong), or
-\emph{absorbed} (verifier accepts; final answer nevertheless correct, e.g.,
-the solver ignored the corrupted span). We report:
-(i)~\emph{accuracy} per condition;
-(ii)~\emph{propagation rate}, defined as the fraction of valid injections that yield an incorrect final answer, calculated exclusively over the subset of problems correctly solved by the clean pipeline (Condition~B) to ensure that downstream errors are causally attributable to the injected fault;
-(iii)~\emph{catch rate} and \emph{correction rate} of the verifier, both overall and stratified by error type, severity, and prompting strategy; and
-(iv)~\emph{token cost}, measured as the average number of tokens consumed per solved problem.
+Every injected fault results in one of four outcomes: \emph{caught and corrected}, \emph{caught but wrong correction}, \emph{silently propagated}, or \emph{absorbed} (the solver naturally corrected the plan mistake).
 
-\subsection{Statistical analysis}
-All condition contrasts use McNemar's exact test on paired
-correct/incorrect outcomes~\citep{dietterich1998approximate}, the appropriate
-test when two systems answer the same items. Accuracies carry 95\%
-percentile-bootstrap intervals (10{,}000 resamples); rates carry Wilson
-score intervals. The effects of injection position, fault type, and verifier
-strategy on fault survival are estimated by logistic regression, reported as
-odds ratios. Because several contrasts are tested, $p$-values are
-Holm--Bonferroni corrected~\citep{dror2018hitchhiker}. Runs use
-temperature~0 on a fixed seeded sample.
-
-\subsection{Setup and reproducibility}
-Main experiments use Claude Sonnet 4.6 with temperature 0; cross-model replications use Qwen
-2.5 72B Instruct under the same condition design. The main dataset is
-GSM-Hard with $n=200$ problems sampled using seed 42. Injection seed 7 is
-held fixed, with operators and severity levels as in
-\S\ref{sec:injection}. Prompts are fixed across conditions and listed
-verbatim in Appendix~\ref{sec:appendix_prompts}. Total API cost: $\sim$\$28. All configuration is
-specified through released YAML files in the repository:
-\texttt{configs/experiment.yaml} (Claude Direct baseline),
-\texttt{configs/experiment\_cot.yaml} (Claude Chain-of-Thought), and
-\texttt{configs/experiment\_rubric.yaml} (Claude Rubric), with corresponding files for the Qwen replication.
-The pipeline execution script is invoked as \texttt{python -m src.runner --config [file.yaml]}. 
-The analysis scripts regenerate the reported condition-level, verifier-strategy, and model-comparison results from the released traces via:
-\texttt{python -m src.stats} (general propagation and McNemar statistics),
-\texttt{python -m src.analyze\_rq2\_verifier\_strategies} (prompt strategy comparisons), and
-\texttt{python -m src.compare\_models} (cross-model comparison summaries).
+\paragraph{Experimental Setup.} Experiments are conducted on $n=200$ GSM-Hard math problems using Claude Sonnet 4.6 (primary) and Qwen 2.5 72B Instruct (replication) at temperature 0. Condition comparisons use McNemar's exact test with Holm--Bonferroni correction ($p_{\mathrm{holm}}$). Prompts are listed in Appendix~\ref{sec:appendix_prompts}.
 
 \section{Results}
 
