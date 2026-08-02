@@ -21,6 +21,8 @@
 \usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta, positioning, calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 \usepackage{microtype} % NOTE: if a local build errors on font expansion, use [expansion=false]
 \usepackage[colorlinks=true, citecolor=blue, urlcolor=blue, linkcolor=blue]{hyperref}
 \usepackage{caption}
@@ -29,6 +31,14 @@
 \usepackage{xcolor}
 \newcommand{\pending}[1]{\textcolor{purple}{[#1]}}
 \renewcommand{\thesection}{\Roman{section}}
+
+% Figure palette (shared with paper/figures/fig1_pipeline.tex): near-monochrome
+% with two hue accents keyed to the paper's own finding -- plan-stage faults
+% are comparatively safe, solver-stage faults are where risk concentrates.
+\definecolor{ink}{HTML}{111827}
+\definecolor{edge}{HTML}{4B5563}
+\definecolor{steel}{HTML}{3B6E8F}   % plan-stage accent (C1/D1)
+\definecolor{fault}{HTML}{9E1B2F}   % solver-stage accent (C2/D2), matches Fig.1
 
 \title{\texorpdfstring{\huge\bfseries Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}{Which Verifier Catches What? Mapping Error Severity to Verifier Strategy in Multi-Agent LLM Pipelines}}
 \author{
@@ -307,18 +317,130 @@ D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
 \caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Propagation rate is computed over the problems correctly solved by the clean pipeline (B).}\label{tab:conditions_results}
 \end{table}
 
-\begin{figure}[H]\centering
-\includegraphics[width=0.85\linewidth]{fig2_acc.png}
-\caption{Accuracy by condition with 95\% bootstrap confidence intervals (GSM-Hard, $n=200$).}\label{fig:acc}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.92\linewidth, height=5.6cm,
+  ybar, bar width=15pt,
+  ymin=0, ymax=85,
+  ytick={0,20,40,60,80},
+  ylabel={Accuracy (\%)},
+  ylabel style={font=\footnotesize},
+  axis lines=left,
+  symbolic x coords={A,B,C1,D1,C2,D2},
+  xtick={A,B,C1,D1,C2,D2},
+  xticklabels={A,B,C1,D1,C2,D2},
+  tick label style={font=\footnotesize},
+  enlarge x limits=0.12,
+  axis line style={draw=edge},
+  tick style={draw=edge},
+  ymajorgrids, major grid style={draw=edge!15},
+  error bars/error bar style={line width=0.8pt, draw=edge},
+  error bars/y dir=both, error bars/y explicit,
+]
+\addplot[ybar, bar shift=0pt, fill=ink,             draw=edge!40, line width=0.3pt] coordinates {(A, 65.5)  +- (0,6.5)};
+\addplot[ybar, bar shift=0pt, fill=ink!60!white,    draw=edge!40, line width=0.3pt] coordinates {(B, 69.5)  +- (0,6.5)};
+\addplot[ybar, bar shift=0pt, fill=steel,           draw=edge!40, line width=0.3pt] coordinates {(C1,66.5) +- (0,6.5)};
+\addplot[ybar, bar shift=0pt, fill=steel!50!white,  draw=edge!40, line width=0.3pt] coordinates {(D1,64.5) +- (0,6.5)};
+\addplot[ybar, bar shift=0pt, fill=fault,           draw=edge!40, line width=0.3pt] coordinates {(C2,60.5) +- (0,6.5)};
+\addplot[ybar, bar shift=0pt, fill=fault!50!white,  draw=edge!40, line width=0.3pt] coordinates {(D2,51.5) +- (0,7.0)};
+% value labels placed above each error-bar cap (not at the bar top) so they
+% never collide with the y-axis gridlines/ticks near the bar's own height.
+\node[font=\scriptsize, text=ink] at (axis cs:A, 75.0)  {65.5};
+\node[font=\scriptsize, text=ink] at (axis cs:B, 79.0)  {69.5};
+\node[font=\scriptsize, text=ink] at (axis cs:C1,76.0)  {66.5};
+\node[font=\scriptsize, text=ink] at (axis cs:D1,74.0)  {64.5};
+\node[font=\scriptsize, text=ink] at (axis cs:C2,70.0)  {60.5};
+\node[font=\scriptsize, text=ink] at (axis cs:D2,61.5)  {51.5};
+\end{axis}
+\end{tikzpicture}
+\caption{Accuracy by condition, 95\% bootstrap CI (Claude Sonnet 4.6, GSM-Hard,
+$n=200$; zero baseline, not truncated -- full numeric detail, including the
+Qwen 2.5 72B replication, is in Table~\ref{tab:conditions_results}). A: single
+agent; B: clean pipeline; C1/D1: plan-stage injection with/without the
+verifier; C2/D2: solver-stage injection with/without the verifier, grouped
+adjacently to compare each pair directly. Solid fill marks verifier present,
+tinted fill marks verifier ablated; steel denotes the plan-stage site, crimson
+the solver-stage site.}\label{fig:acc}
 \end{figure}
 
 \subsection*{RQ1: How do planning vs. execution errors propagate, and does removing the verifier increase failure?}
 
 To begin with, injections in the planner agent (Condition C1) propagate to the final output only in 5.0\% of the cases on Claude and in 4.0\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). In contrast, solver-stage injections (Condition C2) propagate at 12.9\% on Claude and 11.2\% on Qwen—more than double the plan-stage rate (Claude OR = 0.28, $p = 0.0084$; Qwen OR = 0.35, $p = 0.0515$).
 
-\begin{figure}[H]\centering
-\includegraphics[width=0.85\linewidth]{fig3_acc.png}
-\caption{Fate of injected faults by injection stage ($C1$ Plan vs $C2$ Solver).}\label{fig:fate}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  name=fateaxis,
+  width=0.58\linewidth, height=5.8cm,
+  ybar stacked, bar width=36pt,
+  ymin=0, ymax=100,
+  ytick={0,20,40,60,80,100},
+  ylabel={Share of injections (\%)},
+  ylabel style={font=\footnotesize},
+  axis lines=left,
+  symbolic x coords={C1,C2},
+  xtick=data,
+  xticklabels={{C1 (Plan, $n{=}139$)},{C2 (Solver, $n{=}139$)}},
+  tick label style={font=\footnotesize},
+  enlarge x limits=0.22,
+  axis line style={draw=edge},
+  tick style={draw=edge},
+  ymajorgrids, major grid style={draw=edge!15},
+  legend style={font=\scriptsize, at={(0.5,-0.22)}, anchor=north,
+    legend columns=2, draw=none, column sep=8pt},
+  legend cell align=left,
+  area legend,
+]
+\addplot[fill=edge!15, draw=edge!50, line width=0.3pt]
+  coordinates {(C1,89.9) (C2,64.8)};
+\addplot[fill=edge!30, draw=edge!50, line width=0.3pt]
+  coordinates {(C1,5.0) (C2,22.3)};
+\addplot[fill=edge!80, draw=edge!50, line width=0.3pt]
+  coordinates {(C1,2.9) (C2,11.5)};
+\addplot[fill=fault, draw=fault!70!black, line width=0.3pt]
+  coordinates {(C1,2.2) (C2,1.4)};
+\legend{{Absorbed (no flag)},{Caught \& corrected},{Caught, not corrected},{Silently propagated}}
+% "axis cs" only parses inside the axis environment, so the actual visible
+% nodes/draws for these positions are placed AFTER \end{axis} below (named
+% \coordinate markers cost nothing to define here and carry their absolute
+% position out). Drawing directly on these coordinates INSIDE the axis broke
+% two different ways during testing: pgfplots' own stacked-bar fill painted
+% over an interior label (a confirmed draw-order quirk), and the axis's clip
+% path cut off wide callout text at the left/right plot edges. Nothing drawn
+% after the axis closes can be clipped or overpainted, because the axis is
+% already finished.
+\coordinate (c1abs) at (axis cs:C1,45);
+\coordinate (c2abs) at (axis cs:C2,32);
+\coordinate (c1top) at (axis cs:C1,100);
+\coordinate (c1lab) at (axis cs:C1,109);
+\coordinate (c2top) at (axis cs:C2,100);
+\coordinate (c2lab) at (axis cs:C2,109);
+\end{axis}
+\node[font=\scriptsize, text=edge, align=center] at (c1abs) {125/139\\absorbed};
+\node[font=\scriptsize, text=edge, align=center] at (c2abs) {90/139\\absorbed};
+% Combined "propagated" callout: the paper's text defines propagation as
+% caught-not-corrected + silently-propagated together (Sec.~III), but those
+% are two separate thin bands here -- without this, a reader could see the
+% crimson sliver alone (2.2%/1.4%) and think it contradicts the 5.0%/12.9%
+% propagation rate quoted in prose. This is the one annotation worth the
+% extra ink; everything else on this figure stays minimal. Centered anchors:
+% the axis's clip path (the reason an off-center anchor would have mattered)
+% no longer applies once these draw after \end{axis}.
+\draw[fault, line width=0.6pt] (c1top) -- (c1lab);
+\node[font=\bfseries\scriptsize, text=fault, anchor=south] at (c1lab) {propagated: 5.0\%};
+\draw[fault, line width=0.6pt] (c2top) -- (c2lab);
+\node[font=\bfseries\scriptsize, text=fault, anchor=south] at (c2lab) {propagated: 12.9\%};
+\end{tikzpicture}
+\caption{Fate of injected faults by injection stage, as a share of valid
+injections (Claude Sonnet 4.6; $n=139$ each for C1 and C2). Absorbed means
+the solver overrode the fault with no verifier flag; the remaining three
+outcomes all require an active verifier. The propagation rate quoted in the
+text is the combined caught-not-corrected + silently-propagated share,
+annotated above each bar; crimson alone denotes only the silently-propagated
+part of that total.}\label{fig:fate}
 \end{figure}
 
 Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 12.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} = 0.0382$) and from 11.2\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.0781$). In contrast, removing the verifier for plan-stage injections (Condition D1) only slightly increases propagation to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.4240$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), confirming that verifiers provide minimal additional benefit at the planning stage. In other words, verifier agents provide a strong defense against late-stage execution errors, while planning errors are largely self-corrected by intermediate agents before reaching the verification steps.
@@ -587,6 +709,7 @@ Minfeng Qi, Huajie Chen, and Wanlei Zhou.
 
 \end{thebibliography}
 
+\clearpage
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 
