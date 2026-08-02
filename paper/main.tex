@@ -392,20 +392,22 @@ Direct verification suffers from a clear structural bottleneck: high error detec
 A more subtle failure mode is \emph{label-reasoning dissociation}, where the verifier's written critique explicitly identifies the injected fault yet the final verdict token reads \texttt{VERDICT: ACCEPT}. For example, trace audits reveal instances where the verifier notes in prose that a step used an incorrect value, but nevertheless approves the overall solution. This dissociation breaks the implicit assumption that reasoning traces causally drive final verdicts. Structured Rubric prompting mitigates this dissociation by forcing the model to explicitly state pass/fail labels for individual evaluation criteria prior to emitting its overall verdict.
 
 \section{Conclusion}
-This study shows that errors in multi-agent LLM systems do not travel equally across stages. When a planner agent makes a mistake in its initial plan, the solver agent naturally fixes it most of the time by re-checking the original problem---absorbing over 90\% of plan errors across both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct. Because solvers self-correct plan mistakes on their own, placing a verifier at the planning stage adds minimal value (reducing final error propagation by only 3\%--4\%, from 8.6\% D1 to 5.0\% C1 on Claude, and 8.7\% D1 to 4.0\% C1 on Qwen).
+Errors do not travel equally across an agent pipeline. When a planner makes a mistake, the solver usually fixes it on its own by reading the original question. In fact, intermediate solvers absorb over 90\% of plan-stage errors across both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct. Because of this self-correction, adding a verifier after the planner provides little value. It reduces final error propagation by only 3\%--4\% (from 8.6\% D1 to 5.0\% C1 on Claude, and 8.7\% D1 to 4.0\% C1 on Qwen).
 
-In contrast, mistakes made during the solving stage pass straight to the final output unless a verifier steps in. Here, adding a verifier cuts final errors in half (from 27.3\% D2 down to 12.9\% C2 on Claude, and 25.4\% D2 to 11.2\% C2 on Qwen). However, prompt design is critical. Simple direct verifiers often spot errors but mess up the correction line---an issue caused by \emph{post-hoc correction drift} and \emph{label-reasoning dissociation}. Switching to Chain-of-Thought or Rubric verification solves this by forcing the model to think step-by-step before giving a verdict, driving repair accuracy up to 95\%--100\% and suppressing final error propagation down to 1\%--4\%.
+Solver errors are a completely different story. Mistakes made during execution pass straight to the final answer unless a verifier catches them. Here, adding a verifier cuts final pipeline failure in half (from 27.3\% D2 down to 12.9\% C2 on Claude, and 25.4\% D2 to 11.2\% C2 on Qwen).
 
-Crucially, while structured verifiers eliminate logical errors, simple operation flips (like swapping \emph{add} for \emph{subtract}) remain a major blind spot for all models and prompt styles, with catch rates falling below 15.0\%.
+Prompt design matters immensely. Simple direct verifiers spot errors easily, but they frequently blunder the repair step. This happens because single-pass prompts force the model to guess a fix without scratchpad reasoning. Requiring Chain-of-Thought or Rubric verification solves this problem completely. It forces step-by-step evaluation before outputting a verdict token, boosting repair accuracy to 95\%--100\% and suppressing final error propagation to 1\%--4\%.
 
-For developers building multi-agent systems, our findings offer three practical rules:
+One major vulnerability remains. Simple operation flips---such as swapping \emph{add} for \emph{subtract}---act as a blind spot across all models and prompt styles, yielding catch rates below 15.0\%.
+
+Our findings suggest three practical rules for building multi-agent systems:
 \begin{enumerate}
-    \item \textbf{Focus verification on execution:} Place verifiers after the solver, not after the planner.
-    \item \textbf{Use structured prompting:} Always require step-by-step reasoning (Chain-of-Thought or Rubric) so the verifier does not blunder its corrections.
-    \item \textbf{Add rule-based checks:} Combine LLM verifiers with programmatic math checks to catch operation flips that LLMs consistently miss.
+    \item \textbf{Verify execution, not planning:} Place verifiers at the solver stage where errors actually survive.
+    \item \textbf{Mandate structured prompts:} Require step-by-step reasoning (Chain-of-Thought or Rubric) so verifiers do not ruin their corrections.
+    \item \textbf{Add symbolic safeguards:} Pair LLM verifiers with programmatic math checks to catch operation flips that language models miss.
 \end{enumerate}
 
-\paragraph{Broader Impact.} Agent pipelines increasingly mediate consequential work. Measuring where errors survive and how much verification actually helps informs where guardrails belong; we do not foresee direct misuse enabled by these measurements.
+\paragraph{Broader Impact.} Agent pipelines increasingly handle real-world tasks. Pinpointing where errors survive helps developers place guardrails effectively; we do not foresee direct misuse arising from these findings.
 
 \paragraph{Reproducibility.} Code, prompts, configuration, and full traces are available at: \newline
 \href{https://github.com/parajulitilak/multiagent-error-propagation}{\textcolor{blue}{\texttt{github.com/parajulitilak/multiagent-error-propagation}}}.
