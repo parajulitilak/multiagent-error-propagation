@@ -434,7 +434,32 @@ part of that total.}\label{fig:fate}
 
 Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 2.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} < 0.0001$) and from 15.9\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.5406$). In contrast, removing the verifier for plan-stage injections (Condition D1) increases propagation only modestly, to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.1846$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), indicating that a \emph{single-pass} verifier adds little at the planning stage. This qualifier matters: under CoT and Rubric prompting the same Claude contrast is significant ($p_{\mathrm{holm}} = 0.0388$ and $0.0059$, Table~\ref{tab:mcnemar_master}), so plan-stage verification is not worthless in general---it is Direct prompting specifically that fails to earn its place there. In other words, verifier agents provide a strong defense against late-stage execution errors---close to a ninefold reduction on Claude---while planning errors are largely self-corrected by intermediate agents before reaching the verification steps. The Qwen ablation moves in the same direction but does not reach significance.
 
-\subsection*{RQ2: What are the effects of various verifier prompting strategies to catch errors with different levels of severity?}
+\subsection*{RQ2: How does fault severity affect propagation, and are verifiers sensitive to subtle numerical slips?}
+
+Severity is graded only for number swaps (Section~\ref{sec:injection}), so this question is
+answered on that operator alone, pooling the two injection stages to keep the strata usable
+(22--33 injections per tier per model). Under Direct verification the two models disagree,
+and neither shows a clean monotonic effect.
+
+On Qwen, detection rises with magnitude: 45.5\% of mild swaps are flagged, 46.4\% of
+moderate, and 62.1\% of severe. That is the pattern one would expect if a verifier notices
+blatant errors and lets subtle ones through. Propagation nonetheless rises alongside it
+(13.6\%, 21.4\%, 24.1\%), because Qwen's Direct verifier repairs only 54\%--70\% of what it
+catches; detection and repair come apart, as in Section~IV.
+
+Claude inverts the detection ordering: mild swaps are flagged most often (26.9\%), against
+6.1\% moderate and 7.1\% severe. Propagation is 0.0\% for mild and severe and 9.1\% for
+moderate, and every caught swap is repaired correctly. The practical consequence is that on
+Claude severity barely matters, because almost nothing survives at any tier, whereas on Qwen
+it matters mainly through repair failure rather than through detection.
+
+We therefore do not find general support for the idea that verifiers catch blatant errors
+while subtle slips pass: it holds for Qwen's detection rates and is reversed on Claude. With
+22--33 injections per tier these orderings are descriptive rather than inferential. The
+severity-stratified propagation rates under CoT and Rubric prompting, which are 0.0\% in most
+strata, are given in Appendix~\ref{sec:appendix_answers}.
+
+\subsection*{RQ3: How do Direct, Chain-of-Thought, and Rubric prompting compare in catch rate, correction precision, propagation control, and token cost?}
 
 Verifier prompt strategy matters considerably more on the weaker model than on the stronger one. On Claude, all three strategies already achieve high correction precision at the solver stage (95.7\% Direct, 98.0\% CoT, 100.0\% Rubric), and solver-stage propagation under Direct prompting is low to begin with (2.9\%), so Chain-of-Thought (CoT) and Rubric buy only a further reduction to 0.7\%--1.4\%. On Qwen the gap is substantial: Direct prompting repairs only 78.5\% of the errors it catches and leaves 15.9\% of injected faults in the final answer, whereas CoT and Rubric raise correction precision to 95.3\%--98.0\% and cut propagation to 4.6\%--4.7\% (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead: verifier-stage token usage rises by 52\%--96\%, but because verification is only one stage of the pipeline, total token cost per problem increases by just 23\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} and Figure~\ref{fig:tradeoff} for full token breakdowns and the per-strategy cost/propagation trade-off).
 
@@ -628,6 +653,8 @@ Errors do not travel equally across an agent pipeline. When a planner makes a mi
 Solver errors are a completely different story. Mistakes made during execution pass straight to the final answer unless a verifier catches them. Here the verifier is doing most of the work that the pipeline does at all: propagation falls from 27.3\% without it to 2.9\% with it on Claude, a near-ninefold reduction ($p_{\mathrm{holm}} < 0.0001$). The Qwen replication moves the same way but is both smaller and not significant (25.4\% to 15.9\%, $p_{\mathrm{holm}} = 0.5406$), which is our clearest reminder that verifier value is model-dependent.
 
 Prompt design matters, but less uniformly than we expected. On the weaker model the effect is large: Direct verifiers spot errors and then repair only 78.5\% of them, while Chain-of-Thought and Rubric prompting raise repair accuracy to 95.3\%--98.0\% and cut propagation from 15.9\% to 4.6\%--4.7\%. On the stronger model all three strategies already repair 95.7\%--100.0\% of what they catch at the solver stage (88.9\%--90.9\% at the planning stage), and the propagation difference between them (2.9\% versus 0.7\%--1.4\%) is small in absolute terms. Structured verification prompts are therefore most worth their extra tokens when the verifier is the weak link.
+
+Severity turned out to be the weakest of the factors we set out to test. We expected blatant numerical errors to be caught and subtle ones to slip through; that ordering appears on Qwen's detection rates (45.5\% of mild swaps flagged, rising to 62.1\% of severe) but is reversed on Claude, which flags mild swaps most often of all. Neither model shows a monotonic relationship between severity and propagation, and with 22--33 injections per tier we treat these orderings as descriptive rather than established.
 
 One major vulnerability remains. Simple operation flips---such as swapping \emph{add} for \emph{subtract}---act as a blind spot across all models and prompt styles, yielding catch rates below 15.0\%.
 
@@ -1247,7 +1274,7 @@ This appendix provides concise, point-form answers to the specific secondary res
 
 \subsection{Fault Severity \& Sensitivity Dynamics}
 \begin{itemize}
-    \item \textbf{Injection Stage Dominance:} The injection stage (planning vs. execution) is the primary determinant of fault propagation. Fault severity (mild, moderate, severe) plays a secondary, non-monotonic role.
+    \item \textbf{Injection Stage vs. Severity:} Where a stage effect is measurable it dominates severity, but it is measurable on only one of the two models. On Qwen, plan-stage faults propagate at 5.6\% against 15.9\% at the solver stage (OR $=0.32$, $p=0.0164$). On Claude the two stages are indistinguishable (2.9\% each) and only eight faults survive in total, too few to estimate a stage effect either way. Fault severity shows no monotonic relationship with propagation on either model.
     \item \textbf{Direct Verifier Sensitivity:} Under Direct verification, verifiers show no monotonic sensitivity to numerical slip magnitude. Solver-stage number-swap propagation on Claude is 0.0\% for mild, 12.5\% for moderate, and 0.0\% for severe; on Qwen it is 18.2\% mild, 33.3\% moderate, and 33.3\% severe. Each stratum contains only 11--18 injections, so these differences are not separable from sampling noise and we draw no ordering conclusion from them.
     \item \textbf{Structured Verifier Neutralization:} Chain-of-Thought (CoT) and Rubric verification suppress number-swap propagation to \textbf{0.0\%} in 10 of 12 Claude severity strata and 9 of 12 Qwen strata. The exceptions are Rubric on moderate solver-stage swaps for Claude (6.7\%), and, for Qwen, CoT on moderate plan-stage swaps (5.6\%), CoT on severe solver-stage swaps (9.1\%), and Rubric on severe plan-stage swaps (12.5\%). Correction precision on caught number swaps is \textbf{100.0\%} across every Claude stratum (Table~\ref{tab:master_strategy}).
 \end{itemize}
