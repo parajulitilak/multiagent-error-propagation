@@ -68,22 +68,24 @@ what the causal role of verification is. We fill this gap using a technique borr
 software reliability engineering—controlled fault injection: a single intermediate output 
 is manipulated in a prescribed way, and its evolution is followed through the pipeline. 
 Numeric faults are graded into three severity tiers, and the verification stage is assessed
-under three prompting techniques (direct, chain-of-thought, and rubric), each re-run on the
-same set of traces. On 200 GSM-Hard problems, with cross-model replication on Claude Sonnet 4.6
+under three prompting techniques (direct, chain-of-thought, and rubric), each run as an
+independent pass over the same problem sample. On 200 GSM-Hard problems, with cross-model replication on Claude Sonnet 4.6
 and Qwen 2.5 72B Instruct, we contrast the single-agent baseline with clean and faulty three-stage
 pipelines, as well as ablations of the verifier on each stage. With the verifier in place,
 injected faults rarely survive on Claude: 2.9\% of valid injections reach the final answer
 from either stage under the direct verifier. Removing the verifier raises execution-stage
 propagation to 27.3\%, isolating a large causal verifier contribution ($p_{\mathrm{holm}} <
-0.0001$), while the corresponding planning-stage change is small and not significant---most
-upstream errors are absorbed by the solver before verification ever runs. The Qwen
-replication reproduces the direction but not the magnitude, and it is there that verifier
-prompting matters most: direct prompting repairs only 78.5\% of the faults it catches and
-leaves 15.9\% propagating, whereas chain-of-thought and rubric prompting reach 95.3\%--98.0\%
-repair precision and 4.6\%--4.7\% propagation. On Claude all three strategies already repair
-95.7\%--100.0\% at the solver stage, so structured verification prompts pay for themselves mainly when the
-verifier is the weak link. We rely on paired statistical analysis throughout, and release
-code, prompts, and trace data.
+0.0001$), while the corresponding planning-stage change under direct verification is small
+and not significant---most upstream errors are absorbed by the solver before verification
+ever runs. The Qwen replication reproduces the direction but not the magnitude, and it is
+there that verifier prompting matters most: direct prompting repairs only 78.5\% of the
+faults it catches and leaves 15.9\% propagating, whereas chain-of-thought and rubric
+prompting reach 95.3\%--98.0\% repair precision and 4.6\%--4.7\% propagation. On Claude all
+three strategies already repair 95.7\%--100.0\% at the solver stage, so structured
+verification prompts pay for themselves mainly when the verifier is the weak link. Severity
+does not transfer: detection rises with slip magnitude on Qwen but reverses on Claude, so we
+report no consistent severity effect. We rely on paired statistical analysis throughout, and
+release code, prompts, and trace data.
 \newline
 \noindent\textbf{Keywords:} multi-agent systems, LLM pipelines, error propagation, fault injection, 
 verification, chain-of-thought
@@ -105,51 +107,61 @@ ensemble increases~\citep{li2024moreagents}.
 their own reasoning. Without any kind of external input, self-correction is unlikely to 
 improve reasoning accuracy and is likely to decrease it~\citep{huang2023selfcorrect}. The 
 most extensive account of multi-agent system breakdowns to this date is the Multi-Agent 
-System Failure Taxonomy~\citep{cemri2025mast}, which details the different failures of 
-deployed systems. It particularly focuses on the failures that stem from the interaction of 
-different agents. It provides clear evidence for the varied and extensive nature of failures. 
-However, this solely provides evidence of the frequency of mistakes in the early stages of 
-multi-agent systems. It cannot provide any evidence for how often mistakes went unchecked in 
-the final output, nor can it provide any evidence how much of a buffer the verifier agent 
-provides.
-What lacks is an interventional measure. If an acknowledged fault is incorporated somewhere 
-along the line and the remainder of the pipeline is allowed to operate as normal, many of the 
-limitations of observational studies are resolved. What is being measured is the frequency 
-that an early error is retained in the final product. What is being measured is whether 
-retention of the error depends on the stage of the fault (planning vs execution), whether 
-retention depends on fault severity, and what the verifier actually prevents or removes. 
-Is the verifier only present when the pipeline is successful due to other external factors? 
-How does the role of the verifier change based on how the verifier is prompted?
+System Failure Taxonomy~\citep{cemri2025mast}, which catalogues failure modes observed across
+seven open-source multi-agent frameworks on benchmark tasks. It particularly focuses on the
+failures that stem from the interaction of different agents, and its categories span the whole
+pipeline, from specification through inter-agent misalignment to task verification. It provides
+clear evidence for the varied and extensive nature of failures. Because it is observational,
+however, it records how often each failure mode is \emph{seen} rather than how often a given
+fault would have survived. It therefore cannot tell us what share of upstream mistakes reach
+the final output, nor how much of a buffer the verifier agent provides --- both of which
+require intervening on a known fault rather than cataloguing outcomes.
+What is missing is an interventional measure. If a known fault is introduced at a chosen point
+and the rest of the pipeline is allowed to run normally, many of the limitations of
+observational studies fall away. What we can then measure is how often an early error is
+retained in the final output; whether that retention depends on the stage at which the fault
+was introduced (planning versus execution); whether it depends on the severity of the fault;
+and what the verifier actually prevents or removes, as opposed to what it merely appears to
+prevent when the pipeline happens to succeed for other reasons. It also lets us ask how the
+verifier's contribution changes with the way it is prompted.
 
 To measure these, we have adapted a method from software reliability called fault injection. 
-We will purposely introduce a fault to one of the steps in a Decomposer-Solver-Verifier 
-pipeline and allow the next steps in the pipeline process to continue without change. Since 
-the fault is purposely and known, every subsequent step is a result of an intentional fault. 
-We have designed one of three operators to mimic a true reasoning failure. In the first 
-operator, a number is substituted with a different but reasonable number (number swap), 
-which can also be graded on a pre-established severity scale. The other two operators are an 
-arithmetic operation reversal (operation flip) and an alteration of the logic or order of a 
-reasoning step (semantic logic error). All fault injections are documented with the specific 
-span that was altered.
-Under 6 paired configurations (i.e., baseline, clean three-stage pipeline, injection at the 
-decomposer and solver stages, verifier-removed versions, and two injected pipelines), our 
-main experiments sample 200 GSM-Hard problems. Because all stage outputs are stored, we can 
-replay the same experiment under different verifier prompts and compare verifier strategies 
-with the same inputs. Currently, our code allows comparisons between direct verifiers, 
+We deliberately introduce a fault into one step of a Decomposer-Solver-Verifier
+pipeline and let the remaining steps run unchanged. Because the fault is planted and its
+location recorded, everything downstream can be attributed to it. We use three operators,
+each meant to mimic a plausible reasoning failure. The first substitutes a number for a
+different but superficially reasonable one (number swap), and is the operator we grade on a
+pre-registered severity scale. The other two reverse an arithmetic operation (operation
+flip) and alter the logic or ordering of a reasoning step (semantic logic error). Every
+injection is recorded with the original and modified text; for the two scripted operators we
+also record the exact position altered.
+Our main experiments sample 200 GSM-Hard problems and run them through six paired
+configurations: the single-agent baseline, the clean three-stage pipeline, injection at the
+decomposer stage and at the solver stage, and verifier-removed counterparts of each of those
+two injected conditions. Because all stage outputs are stored, every
+run can be audited after the fact, and we repeat the whole experiment under each verifier
+prompt so that strategies are compared on the same problems and the same injection
+procedure. Currently, our code allows comparisons between direct verifiers,
 chain-of-thought verifiers, and rubric-based verifiers. We also conduct cross-model 
 replication experiments on the Qwen 2.5 72B Instruct model to determine if the qualitative 
 patterns of our main experiments are replicated in other model families. Comparisons are 
 conducted at the level of individual problems and we report interval estimates and exact 
 paired tests in addition to point estimates.
-Our thesis is that in a Decomposer-Solver-Verifier pipeline, the probability of an injected 
-fault surviving to the final answer is a function of the fault’s location and type, as well 
-as the fault’s severity, the presence of a verifier, and the prompt given to the verifier. 
-The design of our study tests each of these claims, particularly the effects of the stage (decomposer vs. solver), 
-the verifier (verifier present vs. ablated), and the verifier-strategy (direct vs. chain-of-thought vs. rubric), 
-on the injected fault, and the problem remains constant.
-This study connects four areas of research. First, agentic frameworks like AutoGen~\citep{wu2023autogen}, 
-MetaGPT~\citep{hong2023metagpt}, and CAMEL~\citep{li2023camel} have created reusable patterns for 
-developing LLM agents. The Decomposer, Solver, and Verifier pipeline we examine is the 
+Our thesis is that in a Decomposer-Solver-Verifier pipeline, the probability of an injected
+fault surviving to the final answer is not uniform: it depends on where the fault is
+introduced, what kind of fault it is, how severe it is, whether a verifier is present, and
+how that verifier is prompted. We treat these as five candidate factors to be tested rather
+than established effects, and we report below that they do not all survive testing --- the
+verifier's presence matters most, stage and fault type matter on one model but are not
+estimable on the other, and severity produces no consistent effect at all.
+The design isolates each factor in turn --- the injection stage (decomposer vs.\ solver), the
+verifier (present vs.\ ablated), the verifier strategy (direct vs.\ chain-of-thought vs.\
+rubric), and, for numeric faults, the severity tier --- while holding the problem sample
+fixed, so that every contrast is paired.
+This study connects four areas of research. First, agentic frameworks like AutoGen~\citep{wu2023autogen},
+MetaGPT~\citep{hong2023metagpt}, and CAMEL~\citep{li2023camel} have created reusable patterns for
+developing LLM agents, building on single-agent scaffolds that interleave reasoning with
+action~\citep{yao2022react}. The Decomposer, Solver, and Verifier pipeline we examine is the
 simplest version that defines planning, execution, and review as separate roles.   
 Second, previous work on debate, ensembling, and self-consistency measures reports accuracy gains~\citep{du2023debate,li2024moreagents,wang2022selfconsistency}, 
 yet it typically does not separate systems that genuinely prevent errors from those that just 
@@ -158,9 +170,9 @@ difference.   Third, research on self-correction and verification demonstrates b
 and the limits of reflective reasoning. Reflexion~\citep{shinn2023reflexion} and Self-Refine~\citep{madaan2023selfrefine} 
 show that models can improve outputs based on feedback. However, Huang et al.~\citep{huang2023selfcorrect} reveal that, 
 without external signals, such revisions often struggle with reasoning tasks. Additionally, 
-LLM judgments have known biases~\citep{zheng2023judge}. Therefore, our verifier ablation and 
-replay design evaluate not just whether review happens but also how much it impacts the 
-outcome of a known fault under the same conditions.   Finally, MAST~\citep{cemri2025mast} 
+LLM judgments have known biases~\citep{zheng2023judge}. Therefore, our verifier ablation and
+prompt-strategy comparison evaluate not just whether review happens but also how much it
+impacts the outcome of a known fault.   Finally, MAST~\citep{cemri2025mast} 
 offers a terminology for multi-agent failure, while recent mitigation systems like DebUnc~\citep{yoffe2024debunc} and graph-based 
 governance methods~\citep{xie2026spark} are based on the idea that upstream errors lead to 
 downstream issues. Our study directly tests this idea and measures when it is valid.
@@ -177,9 +189,9 @@ comparisons, showing the effect of the injection stage, fault type, and fault se
 (iii)~An ablation experiment with the verifier to measure the contribution of the verification
 stage by comparing runs with and without verifiers.
 
-(iv)~Strategy-level analysis of the verification stage through comparison of different 
-verifier prompt strategies (direct, chain of thought, and rubric) using the same stored trace
-for different fault types, severities, and injection stages.
+(iv)~Strategy-level analysis of the verification stage through comparison of different
+verifier prompt strategies (direct, chain of thought, and rubric) over the same problem
+sample and injection procedure, broken down by fault type, severity, and injection stage.
 
 (v)~Open source software that contains the prompts, configurations, analyses, and traces to 
 reproduce our experiments.
@@ -256,20 +268,30 @@ D2 & 2-Agent Ablation & Solver (Solution) & No \\
 To simulate realistic reasoning mistakes, we corrupt exactly one intermediate artifact per run using three fault types:
 \begin{itemize}
     \item \textbf{Number Swap:} Replaces a number in the plan or solution with a wrong value, categorized into three severity tiers: \emph{mild} ($<15\%$ change), \emph{moderate} ($30\%$--$60\%$ change), or \emph{severe} ($>200\%$ change or sign flip).
-    \item \textbf{Operation Flip:} Swaps an arithmetic operation with its inverse (e.g., changing \emph{add} to \emph{subtract} or \emph{multiply} to \emph{divide}).
-    \item \textbf{Semantic Logic Error:} Rewrites the logical sequence of steps while keeping the language fluent.
+    \item \textbf{Operation Flip:} Swaps an operation for its opposite. This covers arithmetic inverses (\emph{add}/\emph{subtract}, \emph{multiply}/\emph{divide}) and the comparative and aggregate terms that carry the same arithmetic intent (\emph{more}/\emph{fewer}, \emph{increase}/\emph{decrease}, \emph{sum}/\emph{difference}, \emph{total}/\emph{difference}).
+    \item \textbf{Semantic Logic Error:} Rewrites the logical sequence of steps while keeping the language fluent. Unlike the other two operators this one is not scripted: the rewrite is produced by a model call instructed to introduce a single reasoning flaw. It is therefore the least controlled of the three, and while the original and rewritten text are both stored, we do not automatically verify that exactly one flaw was introduced.
 \end{itemize}
+
+Problems are sampled with seed 42 and injection sites chosen with seed 7, both fixed across
+every condition and strategy so that all comparisons are paired on the same problems.
+Generation uses temperature 0 and a 1024-token cap throughout.
 
 \subsection{Verifier Prompt Strategies and Evaluation Setup}
 \label{sec:strategies}
-To test how prompt design affects verifier performance, we evaluate every run under three prompt strategies on identical traces:
+To test how prompt design affects verifier performance, we repeat the full six-condition
+experiment once per prompt strategy, holding the problem sample, seeds, and injection
+procedure fixed. Because each strategy is a fresh pass through the pipeline rather than a
+replay of stored intermediate outputs, the decomposer and solver outputs are regenerated on
+each pass and are not byte-identical across strategies; the comparison is therefore paired
+at the problem level but not at the trace level, and it carries run-to-run variation along
+with the prompt change (Section~\ref{sec:limitations}). The three strategies are:
 (1)~\textbf{Direct:} Emits an immediate accept/reject verdict and corrected line;
-(2)~\textbf{Chain-of-Thought (CoT):} Generates step-by-step verification reasoning before declaring a verdict; and
+(2)~\textbf{Chain-of-Thought (CoT):} Generates step-by-step verification reasoning before declaring a verdict, applying chain-of-thought prompting~\citep{wei2022cot} to the verification step rather than to the original solution; and
 (3)~\textbf{Rubric:} Systematically evaluates the solution against four explicit criteria (reading, variables, operations, calculations).
 
-Every injected fault results in one of four outcomes: \emph{caught and corrected}, \emph{caught but wrong correction}, \emph{silently propagated}, or \emph{absorbed} (the solver naturally corrected the plan mistake).
+Every injected fault results in one of four outcomes: \emph{caught and corrected}, \emph{caught but wrong correction}, \emph{silently propagated}, or \emph{absorbed}. Absorbed means the final answer was still correct and the verifier never raised a flag. At the planning stage this is the solver re-deriving past the corrupted plan; at the solver stage, where nothing downstream recomputes the arithmetic, it means the injected fault did not change the final quantity --- for instance because it landed in a step whose value the solver did not carry forward.
 
-\paragraph{Experimental Setup.} Experiments are conducted on $n=200$ GSM-Hard math problems using Claude Sonnet 4.6 (primary) and Qwen 2.5 72B Instruct (replication) at temperature 0. Condition comparisons use McNemar's exact test with Holm--Bonferroni correction ($p_{\mathrm{holm}}$). Prompts are listed in Appendix~\ref{sec:appendix_prompts}.
+\paragraph{Experimental Setup.} Experiments are conducted on $n=200$ problems from GSM-Hard~\citep{gao2023pal}, the adversarial variant of GSM8K~\citep{cobbe2021gsm8k} in which the operands are replaced with large values so that the arithmetic cannot be shortcut by memorisation. We use Claude Sonnet 4.6 (primary) and Qwen 2.5 72B Instruct (replication) at temperature 0. Condition comparisons use McNemar's exact test with Holm--Bonferroni correction ($p_{\mathrm{holm}}$), the standard paired test for comparing two classifiers on a shared sample~\citep{dietterich1998approximate}. Prompts are listed in Appendix~\ref{sec:appendix_prompts}.
 
 \section{Results}
 
@@ -438,12 +460,12 @@ Removing the verifier agent (Condition D2) causes solver-stage fault propagation
 
 Severity is graded only for number swaps (Section~\ref{sec:injection}), so this question is
 answered on that operator alone, pooling the two injection stages to keep the strata usable
-(22--33 injections per tier per model). Under Direct verification the two models disagree,
-and neither shows a clean monotonic effect.
+(22--33 injections per tier per model). Under Direct verification the two models order the
+tiers in opposite directions, so there is no consistent cross-model severity effect.
 
-On Qwen, detection rises with magnitude: 45.5\% of mild swaps are flagged, 46.4\% of
-moderate, and 62.1\% of severe. That is the pattern one would expect if a verifier notices
-blatant errors and lets subtle ones through. Propagation nonetheless rises alongside it
+On Qwen both detection and propagation rise monotonically with magnitude: 45.5\% of mild
+swaps are flagged, 46.4\% of moderate, and 62.1\% of severe. That is the pattern one would
+expect if a verifier notices blatant errors and lets subtle ones through. Propagation nonetheless rises alongside it
 (13.6\%, 21.4\%, 24.1\%), because Qwen's Direct verifier repairs only 54\%--70\% of what it
 catches; detection and repair come apart, as in Section~IV.
 
@@ -454,14 +476,15 @@ Claude severity barely matters, because almost nothing survives at any tier, whe
 it matters mainly through repair failure rather than through detection.
 
 We therefore do not find general support for the idea that verifiers catch blatant errors
-while subtle slips pass: it holds for Qwen's detection rates and is reversed on Claude. With
-22--33 injections per tier these orderings are descriptive rather than inferential. The
+while subtle slips pass: it holds cleanly on Qwen and is reversed on Claude. With 22--33
+injections per tier these orderings are descriptive rather than inferential, and we report
+no significance test for them. The
 severity-stratified propagation rates under CoT and Rubric prompting, which are 0.0\% in most
 strata, are given in Appendix~\ref{sec:appendix_answers}.
 
 \subsection*{RQ3: How do Direct, Chain-of-Thought, and Rubric prompting compare in catch rate, correction precision, propagation control, and token cost?}
 
-Verifier prompt strategy matters considerably more on the weaker model than on the stronger one. On Claude, all three strategies already achieve high correction precision at the solver stage (95.7\% Direct, 98.0\% CoT, 100.0\% Rubric), and solver-stage propagation under Direct prompting is low to begin with (2.9\%), so Chain-of-Thought (CoT) and Rubric buy only a further reduction to 0.7\%--1.4\%. On Qwen the gap is substantial: Direct prompting repairs only 78.5\% of the errors it catches and leaves 15.9\% of injected faults in the final answer, whereas CoT and Rubric raise correction precision to 95.3\%--98.0\% and cut propagation to 4.6\%--4.7\% (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead: verifier-stage token usage rises by 52\%--96\%, but because verification is only one stage of the pipeline, total token cost per problem increases by just 23\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} and Figure~\ref{fig:tradeoff} for full token breakdowns and the per-strategy cost/propagation trade-off).
+Verifier prompt strategy matters considerably more on the weaker model than on the stronger one. On Claude, all three strategies already achieve high correction precision at the solver stage (95.7\% Direct, 98.0\% CoT, 100.0\% Rubric), and solver-stage propagation under Direct prompting is low to begin with (2.9\%), so Chain-of-Thought (CoT) and Rubric buy only a further reduction to 0.7\%--1.4\%. On Qwen the gap is substantial: Direct prompting repairs only 78.5\% of the errors it catches and leaves 15.9\% of injected faults in the final answer, whereas CoT and Rubric raise correction precision to 95.3\%--98.0\% and cut propagation to 4.6\%--4.7\% (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead: verifier-stage token usage rises by 52\%--96\%, but because verification is only one stage of the pipeline, total token cost per problem increases by just 24\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} and Figure~\ref{fig:tradeoff} for full token breakdowns and the per-strategy cost/propagation trade-off).
 
 \begin{table}[H]
 \centering\small
@@ -654,7 +677,7 @@ Solver errors are a completely different story. Mistakes made during execution p
 
 Prompt design matters, but less uniformly than we expected. On the weaker model the effect is large: Direct verifiers spot errors and then repair only 78.5\% of them, while Chain-of-Thought and Rubric prompting raise repair accuracy to 95.3\%--98.0\% and cut propagation from 15.9\% to 4.6\%--4.7\%. On the stronger model all three strategies already repair 95.7\%--100.0\% of what they catch at the solver stage (88.9\%--90.9\% at the planning stage), and the propagation difference between them (2.9\% versus 0.7\%--1.4\%) is small in absolute terms. Structured verification prompts are therefore most worth their extra tokens when the verifier is the weak link.
 
-Severity turned out to be the weakest of the factors we set out to test. We expected blatant numerical errors to be caught and subtle ones to slip through; that ordering appears on Qwen's detection rates (45.5\% of mild swaps flagged, rising to 62.1\% of severe) but is reversed on Claude, which flags mild swaps most often of all. Neither model shows a monotonic relationship between severity and propagation, and with 22--33 injections per tier we treat these orderings as descriptive rather than established.
+Severity turned out to be the weakest of the factors we set out to test. We expected blatant numerical errors to be caught and subtle ones to slip through; that ordering holds on Qwen, where detection climbs from 45.5\% of mild swaps to 62.1\% of severe ones, but reverses on Claude, which flags mild swaps most often of all. Because the two models order the tiers in opposite directions, we report no consistent severity effect, and with 22--33 injections per tier we treat these orderings as descriptive rather than established.
 
 One major vulnerability remains. Simple operation flips---such as swapping \emph{add} for \emph{subtract}---act as a blind spot across all models and prompt styles, yielding catch rates below 15.0\%.
 
@@ -717,12 +740,15 @@ clear, verifiable outputs. We also understand that open-ended task dynamics may 
 verifier prompts have been loosely designed, if at all, to optimize, and they represent only 
 a rough configuration. The study was completed in four weeks. 
 \newline The study could benefit in the following rough order of impact, based on the outlined 
-extensions: expanding the protocol to other task distributions beyond GSM-Hard, broadening 
-semantic fault injection to more systematically include contradictions and omissions as well 
-as hallucinated constructs, refining the solver prompt to directly eliminate the absorption 
-of planning stage faults through a silent re-derivation, thus improving the length estimation 
-for the planning stage prompt, assessing how effectively an economical fine-tuning of a small 
-verifier, using QLoRA~\citep{dettmers2023qlora}, impacts the provided tracing as a counterpart 
+extensions: expanding the protocol to other task distributions beyond GSM-Hard, in particular
+multi-hop retrieval tasks such as HotpotQA~\citep{yang2018hotpotqa} where a fault can be
+injected into a retrieval step rather than an arithmetic one, broadening
+semantic fault injection to more systematically include contradictions and omissions as well
+as hallucinated constructs, refining the solver prompt to directly eliminate the absorption
+of planning stage faults through a silent re-derivation, thus improving the length estimation
+for the planning stage prompt, assessing how effectively an economical fine-tuning of a small
+verifier, using low-rank adaptation~\citep{hu2021lora} in its quantised form
+QLoRA~\citep{dettmers2023qlora}, impacts the provided tracing as a counterpart
 to the LLM judge, exploring the cost-benefit of token use with more complex verifiers where 
 a chain of thought or rubric is only applied when the solver shows significant uncertainty, and 
 investigating the DebUnc~\citep{yoffe2024debunc} model, which applies inter-agent Gating within 
@@ -731,9 +757,14 @@ measurement discussed in this paper.
 
 \section{Evaluation}
 We assess the design against the standard threats to validity. \newline
-\textbf{Internal validity}: All contrasts are paired on the same fixed,
-seeded problem sample; every injection is validated and its full record
-released, so any reader can audit the treatment. \newline \textbf{Construct validity}:
+\textbf{Internal validity}: All contrasts are paired on the same fixed problem
+sample (seed 42; injection seed 7), and every injection's full record is released, so any
+reader can audit the treatment. Two caveats qualify this. Scripted injections
+(number swap, operation flip) are verified programmatically to have altered the
+intended token, but semantic logic errors are produced by a model call and are not
+automatically checked to contain exactly one flaw. And the prompt-strategy contrast is
+paired at the problem level rather than the trace level, because each strategy is a
+separate pass through the pipeline (Section~\ref{sec:strategies}). \newline \textbf{Construct validity}:
 Propagation is measured only on problems the clean pipeline solves
 correctly, so a wrong final answer under injection is attributable to the
 fault rather than to baseline inability, and absorption is reported as its
@@ -743,12 +774,15 @@ pre-registered contrast family~\citep{dror2018hitchhiker}. \newline \textbf{Exte
 validity}: Results cover one primary reasoning dataset with objectively
 checkable answers and two model families; replication on both Claude Sonnet
 4.6 and Qwen 2.5 72B Instruct tests whether the observed propagation
-patterns depend on a single model. \newline All conclusions in this paper are drawn
-from these deterministic primary runs (temperature 0). Where the two model families disagree
-we say so explicitly rather than reporting the pooled result: the stage asymmetry is
-established on Qwen and not estimable on Claude, the causal verifier effect at the solver
-stage is significant on Claude but not on Qwen, and the Direct-strategy repair deficit is a
-Qwen phenomenon. Only the plan-stage absorption result and the operation-flip blind spot hold
+patterns depend on a single model. \newline All primary runs use temperature 0, though we
+note this does not make them reproducible byte-for-byte: repeating the clean pipeline under
+an unchanged configuration produced a different final answer on 42 of 200 problems, so some
+of the variation between prompt strategies is run-to-run noise rather than prompt effect.
+Where the two model families disagree we say so explicitly rather than reporting the pooled
+result: the stage asymmetry is established on Qwen and not estimable on Claude, the causal
+verifier effect at the solver stage is significant on Claude under all three strategies but
+on Qwen only under CoT and Rubric, and the Direct-strategy repair deficit is a Qwen
+phenomenon. Only the plan-stage absorption result and the operation-flip blind spot hold
 consistently across both.
 
 \begin{thebibliography}{99}
@@ -789,6 +823,12 @@ Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., \& Mordatch, I. (2023).
 \textit{Improving factuality and reasoning in language models through multiagent debate}
 (arXiv:2305.14325) [Preprint]. arXiv.
 \href{https://arxiv.org/abs/2305.14325}{\textcolor{blue}{https://arxiv.org/abs/2305.14325}}
+
+\bibitem[Gao et al.(2023)]{gao2023pal}
+Gao, L., Madaan, A., Zhou, S., Alon, U., Liu, P., Yang, Y., Callan, J., \& Neubig, G.
+(2023). PAL: Program-aided language models. In \textit{Proceedings of the 40th International
+Conference on Machine Learning} (pp. 10764--10799). PMLR.
+\href{https://arxiv.org/abs/2211.10435}{\textcolor{blue}{https://arxiv.org/abs/2211.10435}}
 
 \bibitem[Hong et al.(2023)]{hong2023metagpt}
 Hong, S., Zheng, X., Chen, J., Cheng, Y., Wang, J., Zhang, C., Wang, Z., Yau, S. K. S.,
@@ -946,69 +986,78 @@ If you reject, explain the error in one sentence, and provide a corrected line: 
 
 \section{Injection Examples}\label{sec:appendix_injections}
 
-\paragraph{Number swap.}
-``Step 1: add 45 and 12.'' $\rightarrow$ ``Step 1: add 76 and 12.''
-(step labels unchanged).
+All examples below are taken verbatim from the released traces rather than constructed for
+illustration.
 
-``Take the 8 apples.'' $\rightarrow$ ``Take the 3 apples.''
+\paragraph{Number swap.} One example per severity tier. Step and list labels are never
+targeted, since corrupting ``Step 1'' changes no quantity.
 
-``Compute 250 $\times$ 0.2.'' $\rightarrow$ ``Compute 150 $\times$ 0.2.''
+\emph{Mild} ($10.0\%$): $5611617 \rightarrow 6172779$.
 
-\paragraph{Operation flip.}
-``Multiply the total by 3.'' $\rightarrow$ ``Divide the total by 3.''
+\emph{Moderate} ($60.0\%$): $5 \rightarrow 8$.
 
-``Add the shipping cost at the end.'' $\rightarrow$ ``Subtract the shipping
-cost at the end.''
+\emph{Severe} (sign flip): $3 \rightarrow -3$.
 
-``Divide the distance by the time.'' $\rightarrow$ ``Multiply the distance by
-the time.''
+\paragraph{Operation flip.} The substitution is lexical and case-preserving. The pairs that
+actually fired, with their frequencies across $C_1$ and $C_2$, were
+``total'' $\rightarrow$ ``difference'' (39), ``Total'' $\rightarrow$ ``difference'' (26),
+``Add'' $\rightarrow$ ``subtract'' (15), ``Sum'' $\rightarrow$ ``difference'' (8),
+``Subtract'' $\rightarrow$ ``add'' (8), and ``multiply'' $\rightarrow$ ``divide'' (5).
 
-\paragraph{Semantic logic error.}
-``Use the discounted price first, then add the service fee.''
-$\rightarrow$ ``Add the service fee first, then apply the discount to the total.''
+\paragraph{Semantic logic error.} Produced by a model call rather than a script, so the
+edit is a fluent rewrite of one step. A representative case:
 
-``Since the boys and girls were split equally, divide the total by 2 before
-applying the shell-count rule.''
-$\rightarrow$ ``Apply the shell-count rule directly to the total before
-splitting into groups.''
-
-``Find the remaining amount after step 2, then compare it with the target.''
-$\rightarrow$ ``Compare the amount with the target before subtracting the
-intermediate cost.''
+``2. Multiply the result by 30 to find the total apples eaten in 30 days.''
+$\rightarrow$ ``2. Multiply the result by 30 to find the total apples eaten in 30 days,
+then divide by 2 again since we counted each person's apples twice in step 1.''
 
 \section{Representative Run Trace}\label{sec:appendix_trace}
-Below is a representative trace from our experimental runs (problem ID: \texttt{gsmhard-train-1209}), showing how a plan-stage number swap is propagated by the solver and subsequently corrected by the verifier:
+Below is a complete trace from the released runs (problem ID: \texttt{gsmhard-train-23},
+condition $C_1$), quoted verbatim. It is a scored \emph{caught and corrected} case: the
+clean pipeline solved this problem, the injected fault reached the final answer, and the
+verifier both flagged and repaired it. It also shows the failure mode behind our
+plan-stage absorption result --- the solver notices the corrupted value, remarks on it, and
+follows it anyway.
 
 \paragraph{Problem.}
 \begin{quote}
-\textit{The local firefighters are doing a ``fill the boot'' fundraiser. Their goal is to raise \$3522385. After the first 3 hours, they have raised \$2100. For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?}
+\textit{John takes care of 1328372 dogs. Each dog takes .5 hours a day to walk and take care
+of their business. How many hours a week does he spend taking care of dogs?}
 \end{quote}
 
 \paragraph{Decomposer plan.}
 \begin{quote}
-\textit{1. Calculate the amount raised per hour by dividing \$2100 by 3 hours.\\
-2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
+\textit{1. Calculate daily hours by multiplying 1,328,372 dogs $\times$ 0.5 hours per dog.\\
+2. Calculate weekly hours by multiplying the daily total $\times$ 7 days per week.}
 \end{quote}
 
-\paragraph{Injected plan-stage fault (C1 condition - Number swap).}
+\paragraph{Injected plan-stage fault ($C_1$, number swap, mild: $7 \rightarrow 8$).}
 \begin{quote}
-\textit{1. Calculate the amount raised per hour by dividing \textbf{\$1890} by 3 hours.\\
-2. Divide the total goal (\$3,522,385) by the hourly rate to find the total number of hours needed.}
+\textit{1. Calculate daily hours by multiplying 1,328,372 dogs $\times$ 0.5 hours per dog.\\
+2. Calculate weekly hours by multiplying the daily total $\times$ \textbf{8} days per week.}
 \end{quote}
 
 \paragraph{Solver execution.}
 \begin{quote}
-\textit{Step 1: Calculate the amount raised per hour: \$1890 $\div$ 3 = \$630 per hour.\\
-Step 2: Divide the total goal by the hourly rate: \$3,522,385 $\div$ \$630 = 5,591.88... Rounding up to complete the goal: 5,592 hours.\\
-FINAL ANSWER: 5592}
+\textit{Step 1: Calculate daily hours\\
+1,328,372 dogs $\times$ 0.5 hours per dog = 664,186 hours per day\\
+Step 2: Calculate weekly hours\\
+\textbf{Note: The plan states 8 days per week (unusual, but I'll follow the plan as given)}\\
+664,186 $\times$ 8 = 5,313,488 hours per week\\
+FINAL ANSWER: 5,313,488}
 \end{quote}
 
 \paragraph{Verifier verdict \& correction.}
 \begin{quote}
-\textit{The problem states they raised \$2100 in the first 3 hours, giving a rate of \$2100 $\div$ 3 = \$700 per hour. The proposed solution incorrectly uses \$1890 and \$630 per hour instead. The correct calculation is \$3,522,385 $\div$ \$700 = 5,031.978..., which rounds up to 5,032 hours.\\
+\textit{The proposed solution incorrectly uses 8 days per week instead of the standard 7 days
+per week.\\
 VERDICT: REJECT\\
-FINAL ANSWER: 5032}
+FINAL ANSWER: 664,186 $\times$ 7 = 4,649,302 hours per week.}
 \end{quote}
+
+\noindent The gold answer is $4{,}649{,}302$, so this trace is scored correct. Note that the
+verifier states its answer as an expression; our scorer takes the value after the final
+``$=$'' (Section~\ref{sec:limitations}).
 
 \section{Master Experimental Reports}\label{sec:appendix_reports}
 
@@ -1275,7 +1324,7 @@ This appendix provides concise, point-form answers to the specific secondary res
 \subsection{Fault Severity \& Sensitivity Dynamics}
 \begin{itemize}
     \item \textbf{Injection Stage vs. Severity:} Where a stage effect is measurable it dominates severity, but it is measurable on only one of the two models. On Qwen, plan-stage faults propagate at 5.6\% against 15.9\% at the solver stage (OR $=0.32$, $p=0.0164$). On Claude the two stages are indistinguishable (2.9\% each) and only eight faults survive in total, too few to estimate a stage effect either way. Fault severity shows no monotonic relationship with propagation on either model.
-    \item \textbf{Direct Verifier Sensitivity:} Under Direct verification, verifiers show no monotonic sensitivity to numerical slip magnitude. Solver-stage number-swap propagation on Claude is 0.0\% for mild, 12.5\% for moderate, and 0.0\% for severe; on Qwen it is 18.2\% mild, 33.3\% moderate, and 33.3\% severe. Each stratum contains only 11--18 injections, so these differences are not separable from sampling noise and we draw no ordering conclusion from them.
+    \item \textbf{Direct Verifier Sensitivity:} Under Direct verification the two models order the severity tiers differently, so sensitivity to slip magnitude does not replicate. Solver-stage number-swap propagation on Claude is 0.0\% for mild, 12.5\% for moderate, and 0.0\% for severe --- no ordering at all; on Qwen it is 18.2\% mild, 33.3\% moderate, and 33.3\% severe, which is weakly increasing. Each stratum contains only 11--18 injections, so these differences are not separable from sampling noise and we draw no ordering conclusion from them.
     \item \textbf{Structured Verifier Neutralization:} Chain-of-Thought (CoT) and Rubric verification suppress number-swap propagation to \textbf{0.0\%} in 10 of 12 Claude severity strata and 9 of 12 Qwen strata. The exceptions are Rubric on moderate solver-stage swaps for Claude (6.7\%), and, for Qwen, CoT on moderate plan-stage swaps (5.6\%), CoT on severe solver-stage swaps (9.1\%), and Rubric on severe plan-stage swaps (12.5\%). Correction precision on caught number swaps is \textbf{100.0\%} across every Claude stratum (Table~\ref{tab:master_strategy}).
 \end{itemize}
 
