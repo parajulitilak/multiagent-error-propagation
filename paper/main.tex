@@ -28,7 +28,9 @@
 \usepackage[colorlinks=true, citecolor=blue, urlcolor=blue, linkcolor=blue]{hyperref}
 \usepackage{caption}
 \captionsetup{labelsep=period,font=small}
-\usepackage[numbers,square,sort&compress]{natbib}
+% APA-style author-year citations, per the SISTER template: "(Cemri et al., 2025)"
+\usepackage[authoryear,round]{natbib}
+\bibpunct{(}{)}{;}{a}{,}{,}
 \usepackage{xcolor}
 \newcommand{\pending}[1]{\textcolor{purple}{[#1]}}
 \renewcommand{\thesection}{\Roman{section}}
@@ -65,18 +67,23 @@ not allow one to estimate how often an early error propagates all the way to the
 what the causal role of verification is. We fill this gap using a technique borrowed from 
 software reliability engineering—controlled fault injection: a single intermediate output 
 is manipulated in a prescribed way, and its evolution is followed through the pipeline. 
-Faults are categorized into three classes of severity, and the verification stage is assessed
+Numeric faults are graded into three severity tiers, and the verification stage is assessed
 under three prompting techniques (direct, chain-of-thought, and rubric), each re-run on the
 same set of traces. On 200 GSM-Hard problems, with cross-model replication on Claude Sonnet 4.6
 and Qwen 2.5 72B Instruct, we contrast the single-agent baseline with clean and faulty three-stage
-pipelines, as well as ablations of the verifier on each stage. On Claude, injected
-execution-stage faults reached the final answer in 12.9\% of valid cases under the direct
-verifier, while planning-stage faults propagated in only 5.0\%, showing that most upstream
-errors are naturally absorbed before verification. Removing the verifier raised
-execution-stage propagation to 27.3\%, isolating a substantial causal verifier contribution;
-chain-of-thought and rubric prompting reduced that propagation further to 1.4\% and raised
-correction precision from 66.0\% under the direct verifier to 95.9\% and 100.0\%, respectively.
-We rely on paired statistical analysis throughout, and release code, prompts, and trace data.
+pipelines, as well as ablations of the verifier on each stage. With the verifier in place,
+injected faults rarely survive on Claude: 2.9\% of valid injections reach the final answer
+from either stage under the direct verifier. Removing the verifier raises execution-stage
+propagation to 27.3\%, isolating a large causal verifier contribution ($p_{\mathrm{holm}} <
+0.0001$), while the corresponding planning-stage change is small and not significant---most
+upstream errors are absorbed by the solver before verification ever runs. The Qwen
+replication reproduces the direction but not the magnitude, and it is there that verifier
+prompting matters most: direct prompting repairs only 78.5\% of the faults it catches and
+leaves 15.9\% propagating, whereas chain-of-thought and rubric prompting reach 95.3\%--98.0\%
+repair precision and 4.6\%--4.7\% propagation. On Claude all three strategies already repair
+95.7\%--100.0\% at the solver stage, so structured verification prompts pay for themselves mainly when the
+verifier is the weak link. We rely on paired statistical analysis throughout, and release
+code, prompts, and trace data.
 \newline
 \noindent\textbf{Keywords:} multi-agent systems, LLM pipelines, error propagation, fault injection, 
 verification, chain-of-thought
@@ -266,7 +273,7 @@ Every injected fault results in one of four outcomes: \emph{caught and corrected
 
 \section{Results}
 
-The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and matches it on Qwen 2.5 72B (62.5\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance (Table~\ref{tab:conditions_results}, Figure~\ref{fig:acc}).
+The clean three-stage pipeline (Condition B) improves accuracy over the single-agent baseline (Condition A) on Claude Sonnet 4.6 (69.5\% vs 65.5\%, $p_{\mathrm{holm}} = 0.0645$) and matches it on Qwen 2.5 72B (63.0\% vs 62.5\%, $p_{\mathrm{holm}} = 1.0000$), though neither improvement reaches statistical significance (Table~\ref{tab:conditions_results}, Figure~\ref{fig:acc}).
 
 \begin{table}[H]
 \centering\small
@@ -277,21 +284,21 @@ The clean three-stage pipeline (Condition B) improves accuracy over the single-a
 \multicolumn{6}{l}{\textbf{Claude Sonnet 4.6}} \\
 A  & Single-agent baseline          & 65.5\% & [59.0, 72.0] & ---   & 0.0645 \\
 B  & Clean pipeline                 & 69.5\% & [63.0, 76.0] & ---   & ---    \\
-C1 & Plan injected + verifier       & 66.5\% & [60.0, 73.0] & 5.0\% & 0.1406 \\
-C2 & Solver injected + verifier     & 60.5\% & [54.0, 67.0] & 12.9\% & ---   \\
+C1 & Plan injected + verifier       & 68.0\% & [61.5, 74.5] & 2.9\% & 0.3750 \\
+C2 & Solver injected + verifier     & 67.5\% & [61.0, 74.0] & 2.9\% & ---   \\
 D1 & Plan injected, no verifier     & 64.5\% & [58.0, 71.0] & 8.6\%  & ---   \\
 D2 & Solver injected, no verifier   & 51.5\% & [44.5, 58.5] & 27.3\% & ---   \\
 \midrule
 \multicolumn{6}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
 A  & Single-agent baseline          & 62.5\% & [56.0, 69.5] & ---   & 1.0000 \\
-B  & Clean pipeline                 & 62.5\% & [56.0, 69.0] & ---   & ---    \\
-C1 & Plan injected + verifier       & 62.5\% & [56.0, 69.5] & 4.0\% & 1.0000 \\
-C2 & Solver injected + verifier     & 58.5\% & [51.5, 65.0] & 11.2\% & ---   \\
+B  & Clean pipeline                 & 63.0\% & [56.5, 69.5] & ---   & ---    \\
+C1 & Plan injected + verifier       & 61.5\% & [55.0, 68.0] & 5.6\% & 1.0000 \\
+C2 & Solver injected + verifier     & 56.0\% & [49.0, 63.0] & 15.9\% & ---   \\
 D1 & Plan injected, no verifier     & 61.0\% & [54.5, 67.5] & 8.7\%  & ---   \\
 D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
 \midrule
 \multicolumn{6}{l}{\textit{Verifier ablation (C vs D), Holm-corrected McNemar:}} \\
-\multicolumn{6}{l}{Claude C1:D1 $p=0.4240$; C2:D2 $p=0.0382$ \qquad Qwen C1:D1 $p=1.0000$; C2:D2 $p=0.0781$} \\
+\multicolumn{6}{l}{Claude C1:D1 $p=0.1846$; C2:D2 $p<0.0001$ \qquad Qwen C1:D1 $p=1.0000$; C2:D2 $p=0.5406$} \\
 \bottomrule
 \end{tabular}
 \caption{Accuracy and propagation rate by condition (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, GSM-Hard $n=200$). Propagation rate is computed over the problems correctly solved by the clean pipeline (B).}\label{tab:conditions_results}
@@ -321,17 +328,17 @@ D2 & Solver injected, no verifier   & 50.5\% & [44.0, 57.5] & 25.4\% & ---   \\
 ]
 \addplot[ybar, bar shift=0pt, fill=ink,             draw=edge!40, line width=0.3pt] coordinates {(A, 65.5)  +- (0,6.5)};
 \addplot[ybar, bar shift=0pt, fill=ink!60!white,    draw=edge!40, line width=0.3pt] coordinates {(B, 69.5)  +- (0,6.5)};
-\addplot[ybar, bar shift=0pt, fill=steel,           draw=edge!40, line width=0.3pt] coordinates {(C1,66.5) +- (0,6.5)};
+\addplot[ybar, bar shift=0pt, fill=steel,           draw=edge!40, line width=0.3pt] coordinates {(C1,68.0) +- (0,6.5)};
 \addplot[ybar, bar shift=0pt, fill=steel!50!white,  draw=edge!40, line width=0.3pt] coordinates {(D1,64.5) +- (0,6.5)};
-\addplot[ybar, bar shift=0pt, fill=fault,           draw=edge!40, line width=0.3pt] coordinates {(C2,60.5) +- (0,6.5)};
+\addplot[ybar, bar shift=0pt, fill=fault,           draw=edge!40, line width=0.3pt] coordinates {(C2,67.5) +- (0,6.5)};
 \addplot[ybar, bar shift=0pt, fill=fault!50!white,  draw=edge!40, line width=0.3pt] coordinates {(D2,51.5) +- (0,7.0)};
 % value labels placed above each error-bar cap (not at the bar top) so they
 % never collide with the y-axis gridlines/ticks near the bar's own height.
 \node[font=\scriptsize, text=ink] at (axis cs:A, 75.0)  {65.5};
 \node[font=\scriptsize, text=ink] at (axis cs:B, 79.0)  {69.5};
-\node[font=\scriptsize, text=ink] at (axis cs:C1,76.0)  {66.5};
+\node[font=\scriptsize, text=ink] at (axis cs:C1,77.5)  {68.0};
 \node[font=\scriptsize, text=ink] at (axis cs:D1,74.0)  {64.5};
-\node[font=\scriptsize, text=ink] at (axis cs:C2,70.0)  {60.5};
+\node[font=\scriptsize, text=ink] at (axis cs:C2,77.0)  {67.5};
 \node[font=\scriptsize, text=ink] at (axis cs:D2,61.5)  {51.5};
 \end{axis}
 \end{tikzpicture}
@@ -347,7 +354,7 @@ the solver-stage site.}\label{fig:acc}
 
 \subsection*{RQ1: How do planning vs. execution errors propagate, and does removing the verifier increase failure?}
 
-To begin with, injections in the planner agent (Condition C1) propagate to the final output only in 5.0\% of the cases on Claude and in 4.0\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). In contrast, solver-stage injections (Condition C2) propagate at 12.9\% on Claude and 11.2\% on Qwen—more than double the plan-stage rate (Claude OR = 0.28, $p = 0.0084$; Qwen OR = 0.35, $p = 0.0515$; full multivariable model in Table~\ref{tab:logit_master} and Figure~\ref{fig:forest}).
+To begin with, injections in the planner agent (Condition C1) propagate to the final output in only 2.9\% of the cases on Claude and 5.6\% of them on Qwen. Solvers naturally absorb most plan errors by re-deriving calculations directly from the problem statement (Figure~\ref{fig:fate}). Solver-stage injections (Condition C2) behave differently across the two models: on Qwen they propagate at 15.9\%, roughly three times the plan-stage rate (OR = 0.32, $p = 0.0164$), whereas on Claude the two stages are indistinguishable at 2.9\% each. With only eight faults surviving across both Claude conditions, the Claude stage effect is better described as not estimable than as absent (OR = 0.94, 95\% CI [0.23, 3.86]); the evidence for a stage asymmetry therefore rests on the Qwen replication (full multivariable model in Table~\ref{tab:logit_master} and Figure~\ref{fig:forest}).
 
 \begin{figure}[H]
 \centering
@@ -375,11 +382,11 @@ To begin with, injections in the planner agent (Condition C1) propagate to the f
   area legend,
 ]
 \addplot[fill=edge!10, draw=edge!50, line width=0.3pt]
-  coordinates {(C1,89.9) (C2,64.8)};
+  coordinates {(C1,89.9) (C2,64.7)};
 \addplot[fill=edge!45, draw=edge!50, line width=0.3pt]
-  coordinates {(C1,5.0) (C2,22.3)};
+  coordinates {(C1,7.2) (C2,32.4)};
 \addplot[fill=edge!80, draw=edge!50, line width=0.3pt]
-  coordinates {(C1,2.9) (C2,11.5)};
+  coordinates {(C1,0.7) (C2,1.4)};
 \addplot[fill=fault, draw=fault!70!black, line width=0.3pt]
   coordinates {(C1,2.2) (C2,1.4)};
 \legend{{Absorbed (no flag)},{Caught \& corrected},{Caught, not corrected},{Silently propagated}}
@@ -394,7 +401,7 @@ To begin with, injections in the planner agent (Condition C1) propagate to the f
 % already finished.
 \coordinate (c1abs) at (axis cs:C1,45);
 \coordinate (c2abs) at (axis cs:C2,32);
-\coordinate (c2corr) at (axis cs:C2,76);
+\coordinate (c2corr) at (axis cs:C2,81);
 \coordinate (c1top) at (axis cs:C1,100);
 \coordinate (c1lab) at (axis cs:C1,109);
 \coordinate (c2top) at (axis cs:C2,100);
@@ -402,19 +409,19 @@ To begin with, injections in the planner agent (Condition C1) propagate to the f
 \end{axis}
 \node[font=\scriptsize, text=edge, align=center] at (c1abs) {125/139\\absorbed};
 \node[font=\scriptsize, text=edge, align=center] at (c2abs) {90/139\\absorbed};
-\node[font=\scriptsize, text=ink, align=center] at (c2corr) {31 corrected\\(22.3\%)};
+\node[font=\scriptsize, text=ink, align=center] at (c2corr) {45 corrected\\(32.4\%)};
 % Combined "propagated" callout: the paper's text defines propagation as
 % caught-not-corrected + silently-propagated together (Sec.~III), but those
 % are two separate thin bands here -- without this, a reader could see the
-% crimson sliver alone (2.2%/1.4%) and think it contradicts the 5.0%/12.9%
+% crimson sliver alone (2.2%/1.4%) and think it contradicts the 2.9%/2.9%
 % propagation rate quoted in prose. This is the one annotation worth the
 % extra ink; everything else on this figure stays minimal. Centered anchors:
 % the axis's clip path (the reason an off-center anchor would have mattered)
 % no longer applies once these draw after \end{axis}.
 \draw[fault, line width=0.6pt] (c1top) -- (c1lab);
-\node[font=\bfseries\scriptsize, text=fault, anchor=south] at (c1lab) {propagated: 5.0\%};
+\node[font=\bfseries\scriptsize, text=fault, anchor=south] at (c1lab) {propagated: 2.9\%};
 \draw[fault, line width=0.6pt] (c2top) -- (c2lab);
-\node[font=\bfseries\scriptsize, text=fault, anchor=south] at (c2lab) {propagated: 12.9\%};
+\node[font=\bfseries\scriptsize, text=fault, anchor=south] at (c2lab) {propagated: 2.9\%};
 \end{tikzpicture}
 \caption{Fate of injected faults by injection stage, as a share of valid
 injections (Claude Sonnet 4.6; $n=139$ each for C1 and C2). Absorbed means
@@ -425,11 +432,11 @@ annotated above each bar; crimson alone denotes only the silently-propagated
 part of that total.}\label{fig:fate}
 \end{figure}
 
-Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 12.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} = 0.0382$) and from 11.2\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.0781$). In contrast, removing the verifier for plan-stage injections (Condition D1) only slightly increases propagation to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.4240$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), confirming that verifiers provide minimal additional benefit at the planning stage. In other words, verifier agents provide a strong defense against late-stage execution errors, while planning errors are largely self-corrected by intermediate agents before reaching the verification steps.
+Removing the verifier agent (Condition D2) causes solver-stage fault propagation to jump from 2.9\% to 27.3\% on Claude ($p_{\mathrm{holm}} < 0.0001$) and from 15.9\% to 25.4\% on Qwen ($p_{\mathrm{holm}} = 0.5406$). In contrast, removing the verifier for plan-stage injections (Condition D1) increases propagation only modestly, to 8.6\% on Claude ($p_{\mathrm{holm}} = 0.1846$) and 8.7\% on Qwen ($p_{\mathrm{holm}} = 1.0000$), indicating that a \emph{single-pass} verifier adds little at the planning stage. This qualifier matters: under CoT and Rubric prompting the same Claude contrast is significant ($p_{\mathrm{holm}} = 0.0388$ and $0.0059$, Table~\ref{tab:mcnemar_master}), so plan-stage verification is not worthless in general---it is Direct prompting specifically that fails to earn its place there. In other words, verifier agents provide a strong defense against late-stage execution errors---close to a ninefold reduction on Claude---while planning errors are largely self-corrected by intermediate agents before reaching the verification steps. The Qwen ablation moves in the same direction but does not reach significance.
 
 \subsection*{RQ2: What are the effects of various verifier prompting strategies to catch errors with different levels of severity?}
 
-Under Direct verification, verifiers catch errors, yet frequently fail to fix them. Thus, this strategy yields 66.0\% correction precision on Claude and 85.9\% on Qwen. On the other hand, both Chain-of-Thought (CoT) and Rubric strategies increase correction precision to 95.9\%--100.0\% on Claude and 95.3\%--98.0\% on Qwen. Consequently, CoT and Rubric reduce solver-stage propagation to 1.4\% on Claude and 4.6\%--4.7\% on Qwen (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead: verifier-stage token usage rises by 52\%--96\%, but because verification is only one stage of the pipeline, total token cost per problem increases by just 23\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} and Figure~\ref{fig:tradeoff} for full token breakdowns and the per-strategy cost/propagation trade-off).
+Verifier prompt strategy matters considerably more on the weaker model than on the stronger one. On Claude, all three strategies already achieve high correction precision at the solver stage (95.7\% Direct, 98.0\% CoT, 100.0\% Rubric), and solver-stage propagation under Direct prompting is low to begin with (2.9\%), so Chain-of-Thought (CoT) and Rubric buy only a further reduction to 0.7\%--1.4\%. On Qwen the gap is substantial: Direct prompting repairs only 78.5\% of the errors it catches and leaves 15.9\% of injected faults in the final answer, whereas CoT and Rubric raise correction precision to 95.3\%--98.0\% and cut propagation to 4.6\%--4.7\% (Table~\ref{tab:strategy}). This gain comes at the cost of a modest computational overhead: verifier-stage token usage rises by 52\%--96\%, but because verification is only one stage of the pipeline, total token cost per problem increases by just 23\%--37\% (see Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_cost} and Figure~\ref{fig:tradeoff} for full token breakdowns and the per-strategy cost/propagation trade-off).
 
 \begin{table}[H]
 \centering\small
@@ -440,16 +447,16 @@ Under Direct verification, verifiers catch errors, yet frequently fail to fix th
 \textbf{Stage} & \textbf{Metric} & Catch\% & Corr.\% & Catch\% & Corr.\% & Catch\% & Corr.\% \\
 \midrule
 \multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
-\textbf{Plan ($C_1$)} & Overall & 7.9\% & 63.6\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
-& Prop. Rate & \multicolumn{2}{c}{5.0\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{2.1\%} \\
-\textbf{Solver ($C_2$)} & Overall & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
-& Prop. Rate & \multicolumn{2}{c}{12.9\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{1.4\%} \\
+\textbf{Plan ($C_1$)} & Overall & 7.9\% & 90.9\% & 7.9\% & 90.9\% & 6.4\% & 88.9\% \\
+& Prop. Rate & \multicolumn{2}{c}{2.9\%} & \multicolumn{2}{c}{1.4\%} & \multicolumn{2}{c}{2.1\%} \\
+\textbf{Solver ($C_2$)} & Overall & 33.8\% & 95.7\% & 35.3\% & 98.0\% & 36.4\% & 100.0\% \\
+& Prop. Rate & \multicolumn{2}{c}{2.9\%} & \multicolumn{2}{c}{0.7\%} & \multicolumn{2}{c}{1.4\%} \\
 \midrule
 \multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-\textbf{Plan ($C_1$)} & Overall & 8.8\% & 54.5\% & 5.4\% & 57.1\% & 2.4\% & 33.3\% \\
-& Prop. Rate & \multicolumn{2}{c}{4.0\%} & \multicolumn{2}{c}{3.1\%} & \multicolumn{2}{c}{3.9\%} \\
-\textbf{Solver ($C_2$)} & Overall & 62.4\% & 85.9\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
-& Prop. Rate & \multicolumn{2}{c}{11.2\%} & \multicolumn{2}{c}{4.6\%} & \multicolumn{2}{c}{4.7\%} \\
+\textbf{Plan ($C_1$)} & Overall & 9.5\% & 41.7\% & 5.4\% & 57.1\% & 2.4\% & 33.3\% \\
+& Prop. Rate & \multicolumn{2}{c}{5.6\%} & \multicolumn{2}{c}{3.1\%} & \multicolumn{2}{c}{3.9\%} \\
+\textbf{Solver ($C_2$)} & Overall & 62.7\% & 78.5\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
+& Prop. Rate & \multicolumn{2}{c}{15.9\%} & \multicolumn{2}{c}{4.6\%} & \multicolumn{2}{c}{4.7\%} \\
 \bottomrule
 \end{tabular}
 \caption{Verifier catch rate, correction precision, and propagation rate by prompt strategy and injection stage (Claude Sonnet 4.6 vs Qwen 2.5 72B Instruct, $n=200$).}\label{tab:strategy}
@@ -475,21 +482,21 @@ Under Direct verification, verifiers catch errors, yet frequently fail to fix th
 ]
 \nextgroupplot[title={\footnotesize Plan ($C_1$)}, ylabel={\footnotesize \%}]
 \addplot[ybar, bar shift=-6pt, fill=edge, draw=none] coordinates {(Direct,7.9) (CoT,7.9) (Rubric,6.4)};
-\addplot[ybar, bar shift=6pt,  fill=ink,  draw=none] coordinates {(Direct,63.6) (CoT,90.9) (Rubric,88.9)};
+\addplot[ybar, bar shift=6pt,  fill=ink,  draw=none] coordinates {(Direct,90.9) (CoT,90.9) (Rubric,88.9)};
 \node[font=\scriptsize, text=ink, xshift=-6pt, yshift=2pt] at (axis cs:Direct,7.9)  {7.9};
 \node[font=\scriptsize, text=ink, xshift=-6pt, yshift=2pt] at (axis cs:CoT,7.9)     {7.9};
 \node[font=\scriptsize, text=ink, xshift=-6pt, yshift=2pt] at (axis cs:Rubric,6.4)  {6.4};
-\node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:Direct,63.6) {63.6};
+\node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:Direct,90.9) {90.9};
 \node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:CoT,90.9)    {90.9};
 \node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:Rubric,88.9) {88.9};
 \nextgroupplot[title={\footnotesize Solver ($C_2$)}]
 \addplot[ybar, bar shift=-6pt, fill=edge, draw=none] coordinates {(Direct,33.8) (CoT,35.3) (Rubric,36.4)};
-\addplot[ybar, bar shift=6pt,  fill=ink,  draw=none] coordinates {(Direct,66.0) (CoT,95.9) (Rubric,100.0)};
+\addplot[ybar, bar shift=6pt,  fill=ink,  draw=none] coordinates {(Direct,95.7) (CoT,98.0) (Rubric,100.0)};
 \node[font=\scriptsize, text=ink, xshift=-6pt, yshift=2pt] at (axis cs:Direct,33.8) {33.8};
 \node[font=\scriptsize, text=ink, xshift=-6pt, yshift=2pt] at (axis cs:CoT,35.3)    {35.3};
 \node[font=\scriptsize, text=ink, xshift=-6pt, yshift=2pt] at (axis cs:Rubric,36.4) {36.4};
-\node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:Direct,66.0)  {66.0};
-\node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:CoT,95.9)     {95.9};
+\node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:Direct,95.7)  {95.7};
+\node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:CoT,98.0)     {98.0};
 \node[font=\scriptsize, text=ink, xshift=6pt, yshift=2pt] at (axis cs:Rubric,100.0) {100.0};
 \end{groupplot}
 \node[font=\footnotesize, fill=white, draw=edge, inner sep=3pt, rounded corners=1pt]
@@ -498,12 +505,13 @@ Under Direct verification, verifiers catch errors, yet frequently fail to fix th
 \end{tikzpicture}
 \caption{Verifier catch rate and correction precision by prompt strategy, split by injection
 stage (Claude Sonnet 4.6, $n=200$). Correction precision is the share of caught faults the
-verifier actually fixed; catch rate alone (as under Direct) overstates verifier
-value when repair frequently fails --- see Section~IV, Post-Hoc Correction
-Drift.}\label{fig:strategy}
+verifier actually repaired. On Claude the three strategies differ little in repair quality
+(88.9\%--100.0\%), so the strategy choice mainly shifts how much is caught rather than how
+reliably it is fixed. The Direct-versus-CoT/Rubric repair gap appears instead on Qwen, where
+Direct repairs only 78.5\% of what it catches (Table~\ref{tab:strategy}).}\label{fig:strategy}
 \end{figure}
 
-According to Table~\ref{tab:errortype}, verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen. Under CoT and Rubric prompting this translates to near-0.0\% propagation, but under Direct prompting a substantial share of caught errors are never actually fixed (Section~IV, Post-Hoc Correction Drift), so propagation remains high (30.4\% on Claude, 11.4\% on Qwen) despite comparable detection. Conversely, operation flips can be considered a blind spot across both models and all the prompt strategies used, as catch rates are below 15.0\%, showing no benefit from deploying a verifier. Number-swap errors fall between these extremes: Direct verification misses number swaps most often, while Rubric and CoT substantially reduce their propagation (to 0.0\%--4.3\% across models and stages), though not uniformly to zero (see Appendix~\ref{sec:appendix_answers} for severity sensitivity and Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_errortype} for master report matrices).
+According to Table~\ref{tab:errortype}, verifiers excel at catching semantic logic errors at the solver stage, reaching catch rates of 82.6\%--88.9\% on Claude and 73.8\%--82.4\% on Qwen. On Claude this drives propagation down to 0.0\%--4.3\%, whereas on Qwen 9.8\%--14.3\% still reaches the final answer: detection is comparable across the two models, but a larger share of Qwen's injected faults slips past the verifier unflagged. Conversely, operation flips are a detection blind spot across both models and all prompt strategies, with catch rates below 15.0\%; they survive at low rates anyway, so the verifier's contribution here is small rather than strictly absent (on Qwen, plan-stage operation-flip propagation is 11.1\% ablated versus 0.0\%--2.8\% verified). Number-swap errors fall between these extremes, and the mechanism differs by model. On Claude, Direct propagation stays at 2.4\%--4.3\%. On Qwen, Direct leaves 29.5\% of solver-stage number swaps in the final answer despite catching 86.4\% of them: all 13 survivors were flagged and then mis-repaired, so this is a repair failure, not a detection failure. Rubric and CoT suppress number-swap propagation to 0.0\%--4.3\% across both models and stages (see Appendix~\ref{sec:appendix_answers} for severity sensitivity and Appendix~\ref{sec:appendix_reports}, Table~\ref{tab:master_errortype} for master report matrices).
 
 \begin{table}[H]
 \centering\small
@@ -514,19 +522,19 @@ According to Table~\ref{tab:errortype}, verifiers excel at catching semantic log
 \textbf{Error Type} & \textbf{Stage} & Catch\% & Prop.\% & Catch\% & Prop.\% & Catch\% & Prop.\% \\
 \midrule
 \multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
-Number swap    & Plan   & 4.9\%  & 7.3\%  & 5.3\%  & 0.0\%  & 4.1\%  & 0.0\%  \\
-Number swap    & Solver & 19.6\% & 8.7\%  & 19.6\% & 2.2\%  & 24.4\% & 2.2\%  \\
+Number swap    & Plan   & 4.9\%  & 2.4\%  & 5.3\%  & 0.0\%  & 4.1\%  & 0.0\%  \\
+Number swap    & Solver & 19.6\% & 4.3\%  & 19.6\% & 0.0\%  & 24.4\% & 2.2\%  \\
 Operation flip & Plan   & 0.0\%  & 2.6\%  & 0.0\%  & 2.9\%  & 0.0\%  & 4.8\%  \\
 Operation flip & Solver & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\%  & 2.1\%  & 2.1\%  \\
-Semantic logic & Plan   & 15.0\% & 5.0\%  & 17.0\% & 2.1\%  & 14.3\% & 2.0\%  \\
-Semantic logic & Solver & 82.6\% & 30.4\% & 88.9\% & 2.2\%  & 83.0\% & 0.0\%  \\
+Semantic logic & Plan   & 15.0\% & 3.3\%  & 17.0\% & 2.1\%  & 14.3\% & 2.0\%  \\
+Semantic logic & Solver & 82.6\% & 4.3\%  & 88.9\% & 2.2\%  & 83.0\% & 0.0\%  \\
 \midrule
 \multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-Number swap    & Plan   & 5.9\%  & 5.9\%  & 4.5\%  & 2.3\%  & 4.3\%  & 4.3\%  \\
-Number swap    & Solver & 86.4\% & 18.2\% & 23.5\% & 2.9\%  & 80.0\% & 0.0\%  \\
+Number swap    & Plan   & 8.6\%  & 8.6\%  & 4.5\%  & 2.3\%  & 4.3\%  & 4.3\%  \\
+Number swap    & Solver & 86.4\% & 29.5\% & 23.5\% & 2.9\%  & 80.0\% & 0.0\%  \\
 Operation flip & Plan   & 4.9\%  & 0.0\%  & 2.6\%  & 0.0\%  & 2.8\%  & 2.8\%  \\
-Operation flip & Solver & 10.8\% & 2.7\%  & 0.0\%  & 0.0\%  & 2.2\%  & 0.0\%  \\
-Semantic logic & Plan   & 14.0\% & 6.0\%  & 8.5\%  & 6.4\%  & 0.0\%  & 4.4\%  \\
+Operation flip & Solver & 13.2\% & 5.3\%  & 0.0\%  & 0.0\%  & 2.2\%  & 0.0\%  \\
+Semantic logic & Plan   & 14.0\% & 8.0\%  & 8.5\%  & 6.4\%  & 0.0\%  & 4.4\%  \\
 Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \\
 \bottomrule
 \end{tabular}
@@ -546,7 +554,7 @@ Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \
   y dir=reverse,
   tick label style={font=\footnotesize},
   axis on top,
-  point meta min=0, point meta max=12,
+  point meta min=0, point meta max=6,
   colorbar,
   colorbar style={ylabel={Propagation \%}, font=\footnotesize, ylabel style={font=\footnotesize}},
   enlargelimits=false,
@@ -554,11 +562,11 @@ Semantic logic & Solver & 81.8\% & 11.4\% & 82.4\% & 9.8\%  & 73.8\% & 14.3\%  \
 ]
 \addplot[matrix plot, mesh/cols=3, point meta=explicit] table[meta=C] {
 x y C
-0 0 7.3
+0 0 2.4
 1 0 0.0
 2 0 0.0
-0 1 8.7
-1 1 2.2
+0 1 4.3
+1 1 0.0
 2 1 2.2
 0 2 2.6
 1 2 2.9
@@ -566,41 +574,42 @@ x y C
 0 3 0.0
 1 3 0.0
 2 3 2.1
-0 4 5.0
+0 4 3.3
 1 4 2.1
 2 4 2.0
-0 5 30.4
+0 5 4.3
 1 5 2.2
 2 5 0.0
 };
-\node[font=\footnotesize, text=ink] at (axis cs:0,0) {7.3};
+\node[font=\footnotesize, text=ink] at (axis cs:0,0) {2.4};
 \node[font=\footnotesize, text=ink] at (axis cs:1,0) {0.0};
 \node[font=\footnotesize, text=ink] at (axis cs:2,0) {0.0};
-\node[font=\footnotesize, text=ink] at (axis cs:0,1) {8.7};
-\node[font=\footnotesize, text=ink] at (axis cs:1,1) {2.2};
+\node[font=\footnotesize, text=white] at (axis cs:0,1) {4.3};
+\node[font=\footnotesize, text=ink] at (axis cs:1,1) {0.0};
 \node[font=\footnotesize, text=ink] at (axis cs:2,1) {2.2};
 \node[font=\footnotesize, text=ink] at (axis cs:0,2) {2.6};
 \node[font=\footnotesize, text=ink] at (axis cs:1,2) {2.9};
-\node[font=\footnotesize, text=ink] at (axis cs:2,2) {4.8};
+\node[font=\footnotesize, text=white] at (axis cs:2,2) {4.8};
 \node[font=\footnotesize, text=ink] at (axis cs:0,3) {0.0};
 \node[font=\footnotesize, text=ink] at (axis cs:1,3) {0.0};
 \node[font=\footnotesize, text=ink] at (axis cs:2,3) {2.1};
-\node[font=\footnotesize, text=ink] at (axis cs:0,4) {5.0};
+\node[font=\footnotesize, text=white] at (axis cs:0,4) {3.3};
 \node[font=\footnotesize, text=ink] at (axis cs:1,4) {2.1};
 \node[font=\footnotesize, text=ink] at (axis cs:2,4) {2.0};
-\node[font=\footnotesize, text=white] at (axis cs:0,5) {30.4$^\dagger$};
+\node[font=\footnotesize, text=white] at (axis cs:0,5) {4.3};
 \node[font=\footnotesize, text=ink] at (axis cs:1,5) {2.2};
 \node[font=\footnotesize, text=ink] at (axis cs:2,5) {0.0};
 \end{axis}
 \end{tikzpicture}
 \caption{Propagation rate (\%) by error type, injection stage, and prompt strategy (Claude
-Sonnet 4.6 only; Qwen 2.5 72B in Table~\ref{tab:errortype}). Darker cells are more dangerous;
-the color scale is capped at 12\% so the other 15 cells remain distinguishable from one
-another ($^\dagger$: true value 30.4\%, shown at full saturation). The single dark cell ---
-Direct verification on solver-stage semantic logic errors --- is the same
-detection-without-repair failure quantified in Figure~\ref{fig:strategy}; every other Claude
-cell stays pale. This pattern does not fully replicate on Qwen, where Rubric leaves 14.3\%
-solver-stage semantic-logic propagation rather than suppressing it to 0.0\%.}\label{fig:heatmap}
+Sonnet 4.6 only; Qwen 2.5 72B in Table~\ref{tab:errortype}). Darker cells are more dangerous.
+On Claude no combination of error type, stage, and strategy exceeds 4.8\%: once the pipeline
+retains a verifier, injected faults rarely reach the final answer regardless of which prompt
+strategy the verifier uses. The Qwen replication is markedly less uniform --- Direct leaves
+29.5\% propagation for solver-stage number swaps and Rubric leaves 14.3\% for solver-stage
+semantic logic errors (Table~\ref{tab:errortype}) --- so the flatness of this panel is a
+Claude-specific result and should not be read as a general property of verified
+pipelines.}\label{fig:heatmap}
 \end{figure}
 
 \section{Analysis}
@@ -608,24 +617,24 @@ solver-stage semantic-logic propagation rather than suppressing it to 0.0\%.}\la
 Qualitative trace inspection reveals two primary mechanisms governing verifier behavior and failure modes across the pipeline.
 
 \subsection*{Post-Hoc Correction Drift in Direct Verification}
-Direct verification suffers from a clear structural bottleneck: high error detection paired with poor repair accuracy. Under Direct prompting, verifiers correctly identify flawed solver outputs but frequently blunder the repair step, introducing secondary arithmetic slips when generating the corrected final answer line. Because Direct prompts force the model to emit a single-pass verdict and answer without a computational scratchpad, the model relies on unconstrained generation for correction. Chain-of-Thought and Rubric prompting eliminate this drift by forcing the verifier to construct a step-by-step derivation before emitting the final answer, driving correction precision from 66.0\% to 100.0\%.
+Direct verification shows a repair deficit that is pronounced on Qwen 2.5 72B Instruct and marginal on Claude Sonnet 4.6. Under Direct prompting the Qwen verifier identifies flawed solver outputs at a high rate (62.7\% catch at the solver stage) but repairs only 78.5\% of what it catches, against 98.0\% under Chain-of-Thought and 95.3\% under Rubric prompting. On Claude the same comparison spans a much narrower band, 95.7\%--100.0\%, so the bottleneck is a property of the weaker verifier rather than of single-pass prompting as such. The plausible mechanism is that Direct prompts require a verdict and a corrected answer in one pass, with no scratchpad in which to re-derive the value; Chain-of-Thought and Rubric prompting force an explicit derivation first. One caveat applies specifically to the Qwen traces: its Direct verifier frequently appends a ``Corrected line'' note \emph{after} its stated final answer, and some apparent repair failures are answer-extraction artifacts rather than arithmetic ones (Section~\ref{sec:limitations}). Under a stricter reading of those traces Direct correction precision rises to 84.8\%, still below both alternatives.
 
 \subsection*{Label-Reasoning Dissociation}
 A more subtle failure mode is \emph{label-reasoning dissociation}, where the verifier's written critique explicitly identifies the injected fault yet the final verdict token reads \texttt{VERDICT: ACCEPT}. For example, trace audits reveal instances where the verifier notes in prose that a step used an incorrect value, but nevertheless approves the overall solution. This dissociation breaks the implicit assumption that reasoning traces causally drive final verdicts. Structured Rubric prompting mitigates this dissociation by forcing the model to explicitly state pass/fail labels for individual evaluation criteria prior to emitting its overall verdict.
 
 \section{Conclusion}
-Errors do not travel equally across an agent pipeline. When a planner makes a mistake, the solver usually fixes it on its own by reading the original question. In fact, intermediate solvers absorb over 90\% of plan-stage errors across both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct. Because of this self-correction, adding a verifier after the planner provides little value. It reduces final error propagation by only 3\%--4\% (from 8.6\% D1 to 5.0\% C1 on Claude, and 8.7\% D1 to 4.0\% C1 on Qwen).
+Errors do not travel equally across an agent pipeline. When a planner makes a mistake, the solver usually fixes it on its own by reading the original question. In fact, intermediate solvers absorb roughly 90\% of plan-stage errors across both Claude Sonnet 4.6 and Qwen 2.5 72B Instruct. Because of this self-correction, adding a verifier after the planner provides little value: under Direct verification it reduces final error propagation by 5.7 points on Claude (8.6\% D1 to 2.9\% C1) and 3.1 points on Qwen (8.7\% D1 to 5.6\% C1), neither of which is statistically significant. Under CoT and Rubric prompting the Claude plan-stage reduction does reach significance (Table~\ref{tab:mcnemar_master}), so the ``skip the planning verifier'' rule is specific to single-pass verification.
 
-Solver errors are a completely different story. Mistakes made during execution pass straight to the final answer unless a verifier catches them. Here, adding a verifier cuts final pipeline failure in half (from 27.3\% D2 down to 12.9\% C2 on Claude, and 25.4\% D2 to 11.2\% C2 on Qwen).
+Solver errors are a completely different story. Mistakes made during execution pass straight to the final answer unless a verifier catches them. Here the verifier is doing most of the work that the pipeline does at all: propagation falls from 27.3\% without it to 2.9\% with it on Claude, a near-ninefold reduction ($p_{\mathrm{holm}} < 0.0001$). The Qwen replication moves the same way but is both smaller and not significant (25.4\% to 15.9\%, $p_{\mathrm{holm}} = 0.5406$), which is our clearest reminder that verifier value is model-dependent.
 
-Prompt design matters immensely. Simple direct verifiers spot errors easily, but they frequently blunder the repair step. This happens because single-pass prompts force the model to guess a fix without scratchpad reasoning. Requiring Chain-of-Thought or Rubric verification solves this problem completely. It forces step-by-step evaluation before outputting a verdict token, boosting repair accuracy to 95\%--100\% and suppressing final error propagation to 1\%--4\%.
+Prompt design matters, but less uniformly than we expected. On the weaker model the effect is large: Direct verifiers spot errors and then repair only 78.5\% of them, while Chain-of-Thought and Rubric prompting raise repair accuracy to 95.3\%--98.0\% and cut propagation from 15.9\% to 4.6\%--4.7\%. On the stronger model all three strategies already repair 95.7\%--100.0\% of what they catch at the solver stage (88.9\%--90.9\% at the planning stage), and the propagation difference between them (2.9\% versus 0.7\%--1.4\%) is small in absolute terms. Structured verification prompts are therefore most worth their extra tokens when the verifier is the weak link.
 
 One major vulnerability remains. Simple operation flips---such as swapping \emph{add} for \emph{subtract}---act as a blind spot across all models and prompt styles, yielding catch rates below 15.0\%.
 
 Our findings suggest three practical rules for building multi-agent systems:
 \begin{enumerate}
     \item \textbf{Verify execution, not planning:} Place verifiers at the solver stage where errors actually survive.
-    \item \textbf{Mandate structured prompts:} Require step-by-step reasoning (Chain-of-Thought or Rubric) so verifiers do not ruin their corrections.
+    \item \textbf{Match prompt structure to verifier strength:} Require step-by-step reasoning (Chain-of-Thought or Rubric) when the verifier is the weaker component, where it lifts repair precision from 78.5\% to 95.3\%--98.0\%. On a strong verifier, single-pass prompting already repairs 95.7\%+ and the extra tokens buy little.
     \item \textbf{Add symbolic safeguards:} Pair LLM verifiers with programmatic math checks to catch operation flips that language models miss.
 \end{enumerate}
 
@@ -635,7 +644,45 @@ Our findings suggest three practical rules for building multi-agent systems:
 \href{https://github.com/parajulitilak/multiagent-error-propagation}{\textcolor{blue}{\texttt{github.com/parajulitilak/multiagent-error-propagation}}}.
 
 \section{Improvements}
-Our disturbances are intentionally synthetic, which helps us pinpoint their source. 
+
+\subsection*{Limitations of the present design}\label{sec:limitations}
+Three limitations bound how far these results should be read.
+
+\paragraph{Answer extraction is imperfect, and it is not neutral across models.}
+Agents state their final answer in free text rather than a fixed field, so scoring requires
+extracting a number from prose. We apply one deterministic rule to every trace: take the
+number after the last \texttt{=} if the answer contains one, otherwise the first number in
+the text. This rule was fixed before analysis and is applied blind, but it is not equally
+suited to both models. Claude's verifier typically writes a bare expression
+(``\texttt{36 + 54 = 90 seeds}''), which the rule reads correctly. Qwen's verifier often
+states its answer first and then appends a note (``\texttt{1419161 (Corrected line:
+5000 + 200 = 5200)}''), where the rule takes the number from the note. Auditing every
+record on which the rule disagrees with the run-time score, we find it resolves 18 of 19
+Claude cases correctly but only 4 of 10 Qwen cases. Re-scoring the six affected Qwen
+records by hand moves Qwen's Direct solver-stage propagation from 15.9\% to 11.9\% and its
+correction precision from 78.5\% to 84.8\% --- the direction of every conclusion above is
+unchanged, but Qwen's Direct-strategy deficit is somewhat smaller than the headline numbers
+suggest. We report the uniform rule throughout and flag this as measurement noise
+concentrated in one model's Direct condition.
+
+\paragraph{Claude retains too few surviving faults for stage-level inference.}
+After verification, only eight injected faults survive across both Claude injection
+conditions. That is enough to estimate an overall propagation rate but not enough to
+estimate how stage or error type modulates survival: every Claude odds ratio in
+Table~\ref{tab:logit_master} has a confidence interval spanning an order of magnitude in
+both directions. Claims about \emph{which} faults survive therefore rest on the Qwen
+replication, and should be treated as single-model findings until replicated on a third
+system.
+
+\paragraph{Synthetic faults, one task family.}
+Injections are scripted perturbations of numbers and operators on grade-school math
+problems. They are deliberately unambiguous so that survival is measurable, but they are
+not a sample of the errors real pipelines make --- notably they exclude hallucinated
+premises, retrieval failures, and tool-use errors, and they do not cover open-ended
+generation where no gold answer exists.
+
+\subsection*{Planned extensions}
+Our disturbances are intentionally synthetic, which helps us pinpoint their source.
 Naturally occurring errors are more varied. They require our operators to address mathematical 
 mistakes and logical flaws instead of, for example, hallucinations during open-ended generations. 
 We produce results based on two groups of models and one main task distribution that provide 
@@ -670,135 +717,144 @@ validity}: Results cover one primary reasoning dataset with objectively
 checkable answers and two model families; replication on both Claude Sonnet
 4.6 and Qwen 2.5 72B Instruct tests whether the observed propagation
 patterns depend on a single model. \newline All conclusions in this paper are drawn
-from these deterministic primary runs (temperature 0) and are stated only where the outcomes
-across both model families agree.
+from these deterministic primary runs (temperature 0). Where the two model families disagree
+we say so explicitly rather than reporting the pooled result: the stage asymmetry is
+established on Qwen and not estimable on Claude, the causal verifier effect at the solver
+stage is significant on Claude but not on Qwen, and the Direct-strategy repair deficit is a
+Qwen phenomenon. Only the plan-stage absorption result and the operation-flip blind spot hold
+consistently across both.
 
 \begin{thebibliography}{99}
 
-\bibitem{cemri2025mast}
-Mert Cemri, Melissa Z. Pan, Shuyi Yang, Lakshya A. Agrawal, Bhavya Chopra,
-Rishabh Tiwari, Kurt Keutzer, Aditya Parameswaran, Dan Klein,
-Kannan Ramchandran, Matei Zaharia, Joseph E. Gonzalez, and Ion Stoica.
-\href{https://arxiv.org/abs/2503.13657}{\textcolor{blue}{Why Do Multi-Agent {LLM} Systems Fail?}}
-\textit{arXiv preprint arXiv:2503.13657}, 2025.
+\bibitem[Cemri et al.(2025)]{cemri2025mast}
+Cemri, M., Pan, M. Z., Yang, S., Agrawal, L. A., Chopra, B., Tiwari, R., Keutzer, K.,
+Parameswaran, A., Klein, D., Ramchandran, K., Zaharia, M., Gonzalez, J. E., \& Stoica, I.
+(2025). \textit{Why do multi-agent LLM systems fail?} (arXiv:2503.13657) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2503.13657}{\textcolor{blue}{https://arxiv.org/abs/2503.13657}}
 
-\bibitem{wu2023autogen}
-Qingyun Wu, Gagan Bansal, Jieyu Zhang, Yiran Wu, Beibin Li, Erkang Zhu,
-Li Jiang, Xiaoyun Zhang, Shaokun Zhang, Jiale Liu, Ahmed Hassan Awadallah,
-Ryen W. White, Doug Burger, and Chi Wang.
-\href{https://arxiv.org/abs/2308.08155}{\textcolor{blue}{{AutoGen}: Enabling Next-Gen {LLM} Applications via Multi-Agent Conversation}}
-\textit{arXiv preprint arXiv:2308.08155}, 2023.
+\bibitem[Cobbe et al.(2021)]{cobbe2021gsm8k}
+Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert, M.,
+Tworek, J., Hilton, J., Nakano, R., Hesse, C., \& Schulman, J. (2021).
+\textit{Training verifiers to solve math word problems} (arXiv:2110.14168) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2110.14168}{\textcolor{blue}{https://arxiv.org/abs/2110.14168}}
 
-\bibitem{hong2023metagpt}
-Sirui Hong, Xiawu Zheng, Jonathan Chen, Yuheng Cheng, Jinlin Wang,
-Ceyao Zhang, Zili Wang, Steven Ka Shing Yau, Zijuan Lin, Liyang Zhou,
-Chenyu Ran, Lingfeng Xiao, Chenglin Wu, and J{\"u}rgen Schmidhuber.
-\href{https://arxiv.org/abs/2308.00352}{\textcolor{blue}{{MetaGPT}: Meta Programming for a Multi-Agent Collaborative Framework}}
-\textit{arXiv preprint arXiv:2308.00352}, 2023.
+\bibitem[Dettmers et al.(2023)]{dettmers2023qlora}
+Dettmers, T., Pagnoni, A., Holtzman, A., \& Zettlemoyer, L. (2023). QLoRA: Efficient
+finetuning of quantized LLMs. \textit{Advances in Neural Information Processing Systems},
+\textit{36}.
+\href{https://arxiv.org/abs/2305.14314}{\textcolor{blue}{https://arxiv.org/abs/2305.14314}}
 
-\bibitem{li2023camel}
-Guohao Li, Hasan Hammoud, Hani Itani, Dmitrii Khizbullin, and Bernard Ghanem.
-\href{https://arxiv.org/abs/2303.17760}{\textcolor{blue}{{CAMEL}: Communicative Agents for ``Mind'' Exploration of Large Language Model Society}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Dietterich(1998)]{dietterich1998approximate}
+Dietterich, T. G. (1998). Approximate statistical tests for comparing supervised
+classification learning algorithms. \textit{Neural Computation}, \textit{10}(7),
+1895--1923.
+\href{https://doi.org/10.1162/089976698300017197}{\textcolor{blue}{https://doi.org/10.1162/089976698300017197}}
 
-\bibitem{du2023debate}
-Yilun Du, Shuang Li, Antonio Torralba, Joshua B. Tenenbaum, and Igor Mordatch.
-\href{https://arxiv.org/abs/2305.14325}{\textcolor{blue}{Improving Factuality and Reasoning in Language Models through Multiagent Debate}}
-\textit{arXiv preprint arXiv:2305.14325}, 2023.
+\bibitem[Dror et al.(2018)]{dror2018hitchhiker}
+Dror, R., Baumer, G., Shlomov, S., \& Reichart, R. (2018). The hitchhiker's guide to
+testing statistical significance in natural language processing. In \textit{Proceedings of
+the 56th Annual Meeting of the Association for Computational Linguistics} (pp. 1383--1392).
+Association for Computational Linguistics.
+\href{https://aclanthology.org/P18-1128/}{\textcolor{blue}{https://aclanthology.org/P18-1128/}}
 
-\bibitem{li2024moreagents}
-Junyou Li, Qin Zhang, Yangbin Yu, Qiang Fu, and Deheng Ye.
-\href{https://arxiv.org/abs/2402.05120}{\textcolor{blue}{More Agents Is All You Need}}
-\textit{arXiv preprint arXiv:2402.05120}, 2024.
+\bibitem[Du et al.(2023)]{du2023debate}
+Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., \& Mordatch, I. (2023).
+\textit{Improving factuality and reasoning in language models through multiagent debate}
+(arXiv:2305.14325) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2305.14325}{\textcolor{blue}{https://arxiv.org/abs/2305.14325}}
 
-\bibitem{huang2023selfcorrect}
-Jie Huang, Xinyun Chen, Swaroop Mishra, Huaixiu Steven Zheng, Adams Wei Yu,
-Xinying Song, and Denny Zhou.
-\href{https://arxiv.org/abs/2310.01798}{\textcolor{blue}{Large Language Models Cannot Self-Correct Reasoning Yet}}
-\textit{arXiv preprint arXiv:2310.01798}, 2023.
+\bibitem[Hong et al.(2023)]{hong2023metagpt}
+Hong, S., Zheng, X., Chen, J., Cheng, Y., Wang, J., Zhang, C., Wang, Z., Yau, S. K. S.,
+Lin, Z., Zhou, L., Ran, C., Xiao, L., Wu, C., \& Schmidhuber, J. (2023).
+\textit{MetaGPT: Meta programming for a multi-agent collaborative framework}
+(arXiv:2308.00352) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2308.00352}{\textcolor{blue}{https://arxiv.org/abs/2308.00352}}
 
-\bibitem{shinn2023reflexion}
-Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao.
-\href{https://arxiv.org/abs/2303.11366}{\textcolor{blue}{{Reflexion}: Language Agents with Verbal Reinforcement Learning}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Hu et al.(2021)]{hu2021lora}
+Hu, E. J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., \& Chen, W.
+(2021). \textit{LoRA: Low-rank adaptation of large language models} (arXiv:2106.09685)
+[Preprint]. arXiv.
+\href{https://arxiv.org/abs/2106.09685}{\textcolor{blue}{https://arxiv.org/abs/2106.09685}}
 
-\bibitem{madaan2023selfrefine}
-Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao,
-Sarah Wiegreffe, Uri Alon, Nouha Dziri, Shrimai Prabhumoye, Yiming Yang,
-Shashank Gupta, Bodhisattwa Prasad Majumder, Katherine Hermann,
-Sean Welleck, Amir Yazdanbakhsh, and Peter Clark.
-\href{https://arxiv.org/abs/2303.17651}{\textcolor{blue}{{Self-Refine}: Iterative Refinement with Self-Feedback}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Huang et al.(2023)]{huang2023selfcorrect}
+Huang, J., Chen, X., Mishra, S., Zheng, H. S., Yu, A. W., Song, X., \& Zhou, D. (2023).
+\textit{Large language models cannot self-correct reasoning yet} (arXiv:2310.01798)
+[Preprint]. arXiv.
+\href{https://arxiv.org/abs/2310.01798}{\textcolor{blue}{https://arxiv.org/abs/2310.01798}}
 
-\bibitem{zheng2023judge}
-Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu,
-Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric Xing, Hao Zhang,
-Joseph E. Gonzalez, and Ion Stoica.
-\href{https://arxiv.org/abs/2306.05685}{\textcolor{blue}{Judging {LLM}-as-a-{Judge} with {MT-Bench} and {Chatbot Arena}}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Li et al.(2023)]{li2023camel}
+Li, G., Hammoud, H., Itani, H., Khizbullin, D., \& Ghanem, B. (2023). CAMEL: Communicative
+agents for ``mind'' exploration of large language model society. \textit{Advances in Neural
+Information Processing Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2303.17760}{\textcolor{blue}{https://arxiv.org/abs/2303.17760}}
 
-\bibitem{wei2022cot}
-Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter,
-Fei Xia, Ed Chi, Quoc V. Le, and Denny Zhou.
-\href{https://arxiv.org/abs/2201.11903}{\textcolor{blue}{Chain-of-Thought Prompting Elicits Reasoning in Large Language Models}}
-\textit{Advances in Neural Information Processing Systems}, 35, 2022.
+\bibitem[Li et al.(2024)]{li2024moreagents}
+Li, J., Zhang, Q., Yu, Y., Fu, Q., \& Ye, D. (2024). \textit{More agents is all you need}
+(arXiv:2402.05120) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2402.05120}{\textcolor{blue}{https://arxiv.org/abs/2402.05120}}
 
-\bibitem{wang2022selfconsistency}
-Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc Le, Ed Chi, Sharan Narang,
-Aakanksha Chowdhery, and Denny Zhou.
-\href{https://arxiv.org/abs/2203.11171}{\textcolor{blue}{Self-Consistency Improves Chain of Thought Reasoning in Language Models}}
-\textit{arXiv preprint arXiv:2203.11171}, 2022.
+\bibitem[Madaan et al.(2023)]{madaan2023selfrefine}
+Madaan, A., Tandon, N., Gupta, P., Hallinan, S., Gao, L., Wiegreffe, S., Alon, U.,
+Dziri, N., Prabhumoye, S., Yang, Y., Gupta, S., Majumder, B. P., Hermann, K., Welleck, S.,
+Yazdanbakhsh, A., \& Clark, P. (2023). Self-Refine: Iterative refinement with self-feedback.
+\textit{Advances in Neural Information Processing Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2303.17651}{\textcolor{blue}{https://arxiv.org/abs/2303.17651}}
 
-\bibitem{yao2022react}
-Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran,
-Karthik Narasimhan, and Yuan Cao.
-\href{https://arxiv.org/abs/2210.03629}{\textcolor{blue}{{ReAct}: Synergizing Reasoning and Acting in Language Models}}
-\textit{arXiv preprint arXiv:2210.03629}, 2022.
+\bibitem[Shinn et al.(2023)]{shinn2023reflexion}
+Shinn, N., Cassano, F., Gopinath, A., Narasimhan, K., \& Yao, S. (2023). Reflexion:
+Language agents with verbal reinforcement learning. \textit{Advances in Neural Information
+Processing Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2303.11366}{\textcolor{blue}{https://arxiv.org/abs/2303.11366}}
 
-\bibitem{cobbe2021gsm8k}
-Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun,
-Lukasz Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton,
-Reiichiro Nakano, Christopher Hesse, and John Schulman.
-\href{https://arxiv.org/abs/2110.14168}{\textcolor{blue}{Training Verifiers to Solve Math Word Problems}}
-\textit{arXiv preprint arXiv:2110.14168}, 2021.
+\bibitem[Wang et al.(2022)]{wang2022selfconsistency}
+Wang, X., Wei, J., Schuurmans, D., Le, Q., Chi, E., Narang, S., Chowdhery, A., \& Zhou, D.
+(2022). \textit{Self-consistency improves chain of thought reasoning in language models}
+(arXiv:2203.11171) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2203.11171}{\textcolor{blue}{https://arxiv.org/abs/2203.11171}}
 
-\bibitem{yang2018hotpotqa}
-Zhilin Yang, Peng Qi, Saizheng Zhang, Yoshua Bengio, William W. Cohen,
-Ruslan Salakhutdinov, and Christopher D. Manning.
-\href{https://arxiv.org/abs/1809.09600}{\textcolor{blue}{{HotpotQA}: A Dataset for Diverse, Explainable Multi-hop Question Answering}}
-In \textit{Proceedings of EMNLP}, 2018.
+\bibitem[Wei et al.(2022)]{wei2022cot}
+Wei, J., Wang, X., Schuurmans, D., Bosma, M., Ichter, B., Xia, F., Chi, E., Le, Q. V., \&
+Zhou, D. (2022). Chain-of-thought prompting elicits reasoning in large language models.
+\textit{Advances in Neural Information Processing Systems}, \textit{35}.
+\href{https://arxiv.org/abs/2201.11903}{\textcolor{blue}{https://arxiv.org/abs/2201.11903}}
 
-\bibitem{hu2021lora}
-Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li,
-Shean Wang, Lu Wang, and Weizhu Chen.
-\href{https://arxiv.org/abs/2106.09685}{\textcolor{blue}{{LoRA}: Low-Rank Adaptation of Large Language Models}}
-\textit{arXiv preprint arXiv:2106.09685}, 2021.
+\bibitem[Wu et al.(2023)]{wu2023autogen}
+Wu, Q., Bansal, G., Zhang, J., Wu, Y., Li, B., Zhu, E., Jiang, L., Zhang, X., Zhang, S.,
+Liu, J., Awadallah, A. H., White, R. W., Burger, D., \& Wang, C. (2023).
+\textit{AutoGen: Enabling next-gen LLM applications via multi-agent conversation}
+(arXiv:2308.08155) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2308.08155}{\textcolor{blue}{https://arxiv.org/abs/2308.08155}}
 
-\bibitem{dettmers2023qlora}
-Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, and Luke Zettlemoyer.
-\href{https://arxiv.org/abs/2305.14314}{\textcolor{blue}{{QLoRA}: Efficient Finetuning of Quantized {LLMs}}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Xie et al.(2026)]{xie2026spark}
+Xie, Y., Zhu, C., Zhang, X., Zhu, T., Ye, D., Qi, M., Chen, H., \& Zhou, W. (2026).
+\textit{From spark to fire: Modeling and mitigating error cascades in LLM-based multi-agent
+collaboration} (arXiv:2603.04474) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2603.04474}{\textcolor{blue}{https://arxiv.org/abs/2603.04474}}
 
-\bibitem{dror2018hitchhiker}
-Rotem Dror, Gili Baumer, Segev Shlomov, and Roi Reichart.
-\href{https://aclanthology.org/P18-1128/}{\textcolor{blue}{The Hitchhiker's Guide to Testing Statistical Significance in Natural Language Processing}}
-In \textit{Proceedings of ACL}, 2018.
+\bibitem[Yang et al.(2018)]{yang2018hotpotqa}
+Yang, Z., Qi, P., Zhang, S., Bengio, Y., Cohen, W. W., Salakhutdinov, R., \& Manning, C. D.
+(2018). HotpotQA: A dataset for diverse, explainable multi-hop question answering. In
+\textit{Proceedings of the 2018 Conference on Empirical Methods in Natural Language
+Processing} (pp. 2369--2380). Association for Computational Linguistics.
+\href{https://arxiv.org/abs/1809.09600}{\textcolor{blue}{https://arxiv.org/abs/1809.09600}}
 
-\bibitem{dietterich1998approximate}
-Thomas G. Dietterich.
-\href{https://doi.org/10.1162/089976698300017197}{\textcolor{blue}{Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithms}}
-\textit{Neural Computation}, 10(7):1895--1923, 1998.
+\bibitem[Yao et al.(2022)]{yao2022react}
+Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K., \& Cao, Y. (2022).
+\textit{ReAct: Synergizing reasoning and acting in language models} (arXiv:2210.03629)
+[Preprint]. arXiv.
+\href{https://arxiv.org/abs/2210.03629}{\textcolor{blue}{https://arxiv.org/abs/2210.03629}}
 
-\bibitem{yoffe2024debunc}
-Luke Yoffe, Alfonso Amayuelas, and William Yang Wang.
-\href{https://arxiv.org/abs/2407.06426}{\textcolor{blue}{{DebUnc}: Improving Large Language Model Agent Communication With Uncertainty Metrics}}
-\textit{arXiv preprint arXiv:2407.06426}, 2024.
+\bibitem[Yoffe et al.(2024)]{yoffe2024debunc}
+Yoffe, L., Amayuelas, A., \& Wang, W. Y. (2024). \textit{DebUnc: Improving large language
+model agent communication with uncertainty metrics} (arXiv:2407.06426) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2407.06426}{\textcolor{blue}{https://arxiv.org/abs/2407.06426}}
 
-\bibitem{xie2026spark}
-Yizhe Xie, Congcong Zhu, Xinyue Zhang, Tianqing Zhu, Dayong Ye,
-Minfeng Qi, Huajie Chen, and Wanlei Zhou.
-\href{https://arxiv.org/abs/2603.04474}{\textcolor{blue}{From Spark to Fire: Modeling and Mitigating Error Cascades in {LLM}-Based Multi-Agent Collaboration}}
-\textit{arXiv preprint arXiv:2603.04474}, 2026.
+\bibitem[Zheng et al.(2023)]{zheng2023judge}
+Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li, Z.,
+Li, D., Xing, E., Zhang, H., Gonzalez, J. E., \& Stoica, I. (2023). Judging LLM-as-a-judge
+with MT-Bench and Chatbot Arena. \textit{Advances in Neural Information Processing
+Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2306.05685}{\textcolor{blue}{https://arxiv.org/abs/2306.05685}}
 
 \end{thebibliography}
 
@@ -944,22 +1000,22 @@ Table~\ref{tab:master_strategy} summarizes the verifier catch rate and correctio
 \textbf{Condition / Stratum} & Catch \% & Correct \% & Catch \% & Correct \% & Catch \% & Correct \% \\
 \midrule
 \multicolumn{7}{l}{\textbf{Claude Sonnet 4.6}} \\
-Plan Injected ($C_1$)    & 7.9\%  & 63.6\% & 7.9\%  & 90.9\% & 6.4\%  & 88.9\% \\
-Solver Injected ($C_2$)  & 33.8\% & 66.0\% & 35.3\% & 95.9\% & 36.4\% & 100.0\% \\
-Mild Severity (Number Swaps)     & 0.0\%  & 0.0\%  & 6.7\%  & 50.0\% & 0.0\%  & 0.0\% \\
-Moderate Severity (Number Swaps) & 18.8\% & 50.0\% & 0.0\%  & 0.0\%  & 6.7\%  & 100.0\% \\
-Severe Severity (Number Swaps)   & 7.7\%  & 50.0\% & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\% \\
+Plan Injected ($C_1$)    & 7.9\%  & 90.9\% & 7.9\%  & 90.9\% & 6.4\%  & 88.9\% \\
+Solver Injected ($C_2$)  & 33.8\% & 95.7\% & 35.3\% & 98.0\% & 36.4\% & 100.0\% \\
+Mild Severity (Number Swaps)     & 26.9\% & 100.0\% & 18.8\% & 100.0\% & 15.6\% & 100.0\% \\
+Moderate Severity (Number Swaps) & 6.1\%  & 100.0\% & 8.6\%  & 100.0\% & 17.6\% & 100.0\% \\
+Severe Severity (Number Swaps)   & 7.1\%  & 100.0\% & 8.3\%  & 100.0\% & 7.1\%  & 100.0\% \\
 \midrule
 \multicolumn{7}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-Plan Injected ($C_1$)    & 8.8\%  & 54.5\% & 5.4\%  & 57.1\% & 2.4\%  & 33.3\% \\
-Solver Injected ($C_2$)  & 62.4\% & 85.9\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
-Mild Severity (Number Swaps)     & 9.1\%  & 77.8\% & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\% \\
-Moderate Severity (Number Swaps) & 20.0\% & 58.3\% & 0.0\%  & 0.0\%  & 0.0\%  & 0.0\% \\
-Severe Severity (Number Swaps)   & 22.2\% & 64.7\% & 9.1\%  & 100.0\%& 0.0\%  & 0.0\% \\
+Plan Injected ($C_1$)    & 9.5\%  & 41.7\% & 5.4\%  & 57.1\% & 2.4\%  & 33.3\% \\
+Solver Injected ($C_2$)  & 62.7\% & 78.5\% & 38.5\% & 98.0\% & 50.4\% & 95.3\% \\
+Mild Severity (Number Swaps)     & 45.5\% & 70.0\% & 4.5\%  & 100.0\% & 42.9\% & 100.0\% \\
+Moderate Severity (Number Swaps) & 46.4\% & 53.8\% & 12.9\% & 75.0\%  & 33.3\% & 100.0\% \\
+Severe Severity (Number Swaps)   & 62.1\% & 61.1\% & 20.0\% & 100.0\% & 42.9\% & 91.7\% \\
 \bottomrule
 \end{tabular}%
 }
-\caption{Master verifier catch rate and correction precision by prompt strategy, injection position, and fault severity ($n=200$).}\label{tab:master_strategy}
+\caption{Master verifier catch rate and correction precision by prompt strategy, injection position, and fault severity ($n=200$). The $C_1$/$C_2$ rows are per-stage; the severity rows cover number-swap injections pooled across both stages, since the per-severity, per-stage cells are too small to read on their own.}\label{tab:master_strategy}
 \end{table}
 
 \subsection{Computational Cost by Verifier Strategy}
@@ -976,14 +1032,14 @@ Table~\ref{tab:master_cost} breaks down token usage by pipeline stage and prompt
 Single-agent (A)          & \multicolumn{3}{c}{526 tok/solved} & --- \\
 Clean pipeline (B)        & \multicolumn{3}{c}{1,616 tok/solved} & $+3.1\times$ vs A \\
 Avg C2 tok/problem        & 1,145 & 1,419 & 1,503 & CoT $+23.9\%$;\; Rubric $+31.3\%$ \\
-C2 tok/solved problem     & 1,892 & 2,027 & 2,163 & CoT $+7.1\%$;\; Rubric $+14.3\%$ \\
+C2 tok/solved problem     & 1,696 & 2,012 & 2,178 & CoT $+18.7\%$;\; Rubric $+28.5\%$ \\
 C2 Verifier stage only    & 103,378 & 157,191 & 173,825 & CoT $+52.1\%$;\; Rubric $+68.1\%$ \\
 \midrule
 \multicolumn{5}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
 Single-agent (A)          & \multicolumn{3}{c}{737 tok/solved} & --- \\
 Clean pipeline (B)        & \multicolumn{3}{c}{1,623 tok/solved} & $+2.2\times$ vs A \\
 Avg C2 tok/problem        & 1,063 & 1,460 & 1,383 & CoT $+37.4\%$;\; Rubric $+30.1\%$ \\
-C2 tok/solved problem     & 1,817 & 2,317 & 2,230 & CoT $+27.5\%$;\; Rubric $+22.7\%$ \\
+C2 tok/solved problem     & 1,898 & 2,317 & 2,230 & CoT $+22.1\%$;\; Rubric $+17.5\%$ \\
 C2 Verifier stage only    & 84,165 & 164,977 & 148,567 & CoT $+96.0\%$;\; Rubric $+76.5\%$ \\
 \bottomrule
 \end{tabular}%
@@ -996,7 +1052,7 @@ C2 Verifier stage only    & 84,165 & 164,977 & 148,567 & CoT $+96.0\%$;\; Rubric
 \begin{tikzpicture}
 \begin{axis}[
   width=0.62\linewidth, height=5.4cm,
-  xmin=-3, xmax=36, ymin=0, ymax=14.5,
+  xmin=-3, xmax=36, ymin=0, ymax=4.2,
   xlabel={\footnotesize Token cost overhead vs.\ Direct (\%)},
   ylabel={\footnotesize Solver-stage propagation (\%)},
   ylabel style={font=\footnotesize}, xlabel style={font=\footnotesize},
@@ -1004,21 +1060,23 @@ C2 Verifier stage only    & 84,165 & 164,977 & 148,567 & CoT $+96.0\%$;\; Rubric
   axis lines=left, axis line style={draw=edge}, tick style={draw=edge},
   ymajorgrids, major grid style={draw=edge!15},
 ]
-\addplot[only marks, mark=*, mark size=2.2pt, color=ink] coordinates {(0,12.9)};
-\addplot[only marks, mark=*, mark size=2.2pt, color=edge] coordinates {(23.9,1.4)};
+\addplot[only marks, mark=*, mark size=2.2pt, color=ink] coordinates {(0,2.9)};
+\addplot[only marks, mark=*, mark size=2.2pt, color=edge] coordinates {(23.9,0.7)};
 \addplot[only marks, mark=*, mark size=2.2pt, color=edge!55!black] coordinates {(31.3,1.4)};
-\node[font=\footnotesize, anchor=west, text=ink] at (axis cs:1.5,12.9) {Direct};
-\node[font=\footnotesize, anchor=south, text=edge] at (axis cs:23.9,2.1) {CoT};
-\node[font=\footnotesize, anchor=south, text=edge!55!black] at (axis cs:29.5,2.6) {Rubric};
+\node[font=\footnotesize, anchor=west, text=ink] at (axis cs:1.5,2.9) {Direct};
+\node[font=\footnotesize, anchor=south, text=edge] at (axis cs:22.5,1.0) {CoT};
+\node[font=\footnotesize, anchor=south, text=edge!55!black] at (axis cs:30.0,1.7) {Rubric};
 \end{axis}
 \end{tikzpicture}
 \caption{Solver-stage propagation rate vs.\ token cost overhead, by verifier strategy (Claude
 Sonnet 4.6, relative to Direct verification's average tokens per problem). On Claude, CoT
-reaches the same propagation rate as Rubric (1.4\%) at roughly three-quarters the extra cost
-(+23.9\% vs.\ +31.3\%). This cost ordering is Claude-specific and does not replicate on Qwen
-2.5 72B, where Rubric is cheaper than CoT instead (+30.1\% vs.\ +37.4\%, Table~\ref{tab:master_cost})
-while propagation again ties (4.6\% vs.\ 4.7\%, Table~\ref{tab:strategy}); we do not draw a
-general cost-efficiency recommendation from this figure alone.}\label{fig:tradeoff}
+attains the lowest propagation (0.7\%) at the smaller of the two overheads (+23.9\% vs.\
++31.3\% for Rubric), dominating Rubric on both axes. That ordering is Claude-specific: on
+Qwen 2.5 72B, Rubric is the cheaper option instead (+30.1\% vs.\ +37.4\%,
+Table~\ref{tab:master_cost}) and the two effectively tie on propagation (4.6\% vs.\ 4.7\%,
+Table~\ref{tab:strategy}). Note also the compressed vertical scale: all three Claude
+strategies fall between 0.7\% and 2.9\%, so the practical stakes of this choice are far
+smaller on the stronger model than the Qwen results would suggest.}\label{fig:tradeoff}
 \end{figure}
 
 \subsection{Paired Significance Tests}
@@ -1035,15 +1093,15 @@ Table~\ref{tab:mcnemar_master} gives the full exact McNemar paired test results 
 \midrule
 \multicolumn{8}{l}{\textbf{Claude Sonnet 4.6}} \\
 $A:B$   & Single vs Clean        & ($+9, -1$) & 0.0645 & ($+10, -2$) & 0.0771 & ($+9, -0$) & 0.0078 \\
-$B:C_1$ & Clean vs Plan Sabotage & ($+1, -7$) & 0.1406 & ($+2, -2$)  & 1.0000 & ($+2, -3$) & 1.0000 \\
-$C_1:D_1$ & Plan Verifier Protection & ($+5, -9$) & 0.4240 & ($+2, -12$) & 0.0388 & ($+0, -10$)& 0.0059 \\
-$C_2:D_2$ & Solver Verifier Protection & ($+13, -31$) & 0.0382 & ($+2, -39$) & 0.0000 & ($+1, -37$)& 0.0000 \\
+$B:C_1$ & Clean vs Plan Sabotage & ($+1, -4$) & 0.3750 & ($+2, -2$)  & 1.0000 & ($+2, -3$) & 1.0000 \\
+$C_1:D_1$ & Plan Verifier Protection & ($+3, -10$) & 0.1846 & ($+2, -12$) & 0.0388 & ($+0, -10$)& 0.0059 \\
+$C_2:D_2$ & Solver Verifier Protection & ($+3, -35$) & $<0.0001$ & ($+1, -39$) & $<0.0001$ & ($+2, -37$)& $<0.0001$ \\
 \midrule
 \multicolumn{8}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-$A:B$   & Single vs Clean        & ($+7, -7$) & 1.0000 & ($+10, -5$) & 0.6035 & ($+7, -5$) & 1.0000 \\
-$B:C_1$ & Clean vs Plan Sabotage & ($+5, -5$) & 1.0000 & ($+3, -4$)  & 1.0000 & ($+1, -5$) & 0.6562 \\
-$C_1:D_1$ & Plan Verifier Protection & ($+7, -10$) & 1.0000 & ($+4, -11$) & 0.3554 & ($+7, -8$) & 1.0000 \\
-$C_2:D_2$ & Solver Verifier Protection & ($+13, -29$) & 0.0781 & ($+7, -32$) & 0.0003 & ($+8, -31$)& 0.0012 \\
+$A:B$   & Single vs Clean        & ($+8, -7$) & 1.0000 & ($+10, -5$) & 0.6035 & ($+7, -5$) & 1.0000 \\
+$B:C_1$ & Clean vs Plan Sabotage & ($+4, -7$) & 1.0000 & ($+3, -4$)  & 1.0000 & ($+1, -5$) & 0.6562 \\
+$C_1:D_1$ & Plan Verifier Protection & ($+8, -9$) & 1.0000 & ($+4, -11$) & 0.3554 & ($+7, -8$) & 1.0000 \\
+$C_2:D_2$ & Solver Verifier Protection & ($+17, -28$) & 0.5406 & ($+7, -32$) & 0.0003 & ($+8, -31$)& 0.0012 \\
 \bottomrule
 \end{tabular}%
 }
@@ -1063,18 +1121,18 @@ Table~\ref{tab:logit_master} gives the exact odds ratios underlying the multivar
 \textbf{Predictor Variable} & OR [95\% CI] & $p$-value & OR [95\% CI] & $p$-value & OR [95\% CI] & $p$-value \\
 \midrule
 \multicolumn{7}{l}{\textbf{Claude Sonnet 4.6} (Direct $n=278$; CoT $n=278$; Rubric $n=280$)} \\
-Early Stage (Plan) & 0.28 [0.11, 0.72] & 0.0084 & 1.00 [0.14, 7.31] & 0.9974 & 1.60 [0.26, 9.83] & 0.6094 \\
-Operation Flip     & 0.13 [0.02, 1.09] & 0.0596 & 1.24 [0.08, 20.45] & 0.8783 & 3.29 [0.34, 32.37] & 0.3066 \\
-Semantic Logic     & 2.52 [0.97, 6.54] & 0.0571 & 2.27 [0.20, 25.46] & 0.5072 & 0.98 [0.06, 15.98] & 0.9909 \\
+Early Stage (Plan) & 0.94 [0.23, 3.86] & 0.9280 & 2.20 [0.19, 24.92] & 0.5247 & 1.60 [0.26, 9.83] & 0.6094 \\
+Operation Flip     & 0.33 [0.03, 3.27] & 0.3450 & \multicolumn{2}{c}{not estimable$^\ast$} & 3.29 [0.34, 32.37] & 0.3066 \\
+Semantic Logic     & 1.10 [0.24, 5.11] & 0.8984 & \multicolumn{2}{c}{not estimable$^\ast$} & 0.98 [0.06, 15.98] & 0.9909 \\
 \midrule
-\multicolumn{7}{l}{\textbf{Qwen 2.5 72B Instruct} (Direct $n=250$; CoT $n=260$; Rubric $n=254$)} \\
-Early Stage (Plan) & 0.35 [0.12, 1.01] & 0.0515 & 0.66 [0.18, 2.44] & 0.5282 & 0.77 [0.23, 2.66] & 0.6833 \\
-Operation Flip     & 0.09 [0.01, 0.76] & 0.0263 & 0.00 [0.00, $\infty$] & 0.9992 & 0.51 [0.05, 5.78] & 0.5892 \\
-Semantic Logic     & 0.69 [0.25, 1.87] & 0.4642 & 3.27 [0.67, 15.92] & 0.1427 & 4.24 [0.87, 20.58] & 0.0732 \\
+\multicolumn{7}{l}{\textbf{Qwen 2.5 72B Instruct} (Direct $n=252$; CoT $n=260$; Rubric $n=254$)} \\
+Early Stage (Plan) & 0.32 [0.13, 0.81] & 0.0164 & 0.66 [0.18, 2.44] & 0.5282 & 0.77 [0.23, 2.66] & 0.6833 \\
+Operation Flip     & 0.11 [0.02, 0.48] & 0.0037 & \multicolumn{2}{c}{not estimable$^\ast$} & 0.51 [0.05, 5.78] & 0.5892 \\
+Semantic Logic     & 0.45 [0.18, 1.09] & 0.0762 & 3.27 [0.67, 15.92] & 0.1427 & 4.24 [0.87, 20.58] & 0.0732 \\
 \bottomrule
 \end{tabular}%
 }
-\caption{Multivariable logistic regression odds ratios (OR) for fault survival. Each column is a separately fit model on that strategy's valid injections (C1+C2 pooled); see per-block header for sample sizes.}\label{tab:logit_master}
+\caption{Multivariable logistic regression odds ratios (OR) for fault survival. Each column is a separately fit model on that strategy's valid injections (C1+C2 pooled); see per-block header for sample sizes. $^\ast$Cells marked \emph{not estimable} exhibit quasi-complete separation, so the maximum-likelihood odds ratio diverges and neither the point estimate nor its $p$-value carries information. Error type is coded against number swap as the reference category. Under CoT on Claude no number swap survived (0/57 plan, 0/46 solver), so the odds ratios for the other two types diverge upward; under CoT on Qwen the reverse holds for operation flip, which had no survivors of its own (0/39 plan, 0/45 solver) and diverges downward. Note also that the Claude estimates rest on only eight surviving faults in total, which is why their confidence intervals span an order of magnitude in both directions; the Qwen block is the better-powered of the two.}\label{tab:logit_master}
 \end{table}
 
 \begin{figure}[H]
@@ -1093,56 +1151,57 @@ Semantic Logic     & 0.69 [0.25, 1.87] & 0.4642 & 3.27 [0.67, 15.92] & 0.1427 & 
 ]
 \nextgroupplot[title={\footnotesize Early Stage (Plan)}, yticklabels={Direct,CoT,Rubric}]
 \draw[edge, dashed, line width=0.6pt] (axis cs:1,0.5) -- (axis cs:1,3.5);
-\draw[edge, line width=1pt] (axis cs:0.11,1) -- (axis cs:0.72,1);
-\draw[edge,line width=0.6pt] (axis cs:0.11,0.93) -- (axis cs:0.11,1.07);
-\draw[edge,line width=0.6pt] (axis cs:0.72,0.93) -- (axis cs:0.72,1.07);
-\fill[ink] (axis cs:0.28,1) circle (1.5pt);
-\draw[edge, line width=1pt] (axis cs:0.14,2) -- (axis cs:7.31,2);
-\draw[edge,line width=0.6pt] (axis cs:0.14,1.93) -- (axis cs:0.14,2.07);
-\draw[edge,line width=0.6pt] (axis cs:7.31,1.93) -- (axis cs:7.31,2.07);
-\draw[ink, fill=white, line width=0.8pt] (axis cs:1.00,2) circle (1.5pt);
-\draw[edge, line width=1pt] (axis cs:0.26,3) -- (axis cs:9.83,3);
-\draw[edge,line width=0.6pt] (axis cs:0.26,2.93) -- (axis cs:0.26,3.07);
-\draw[edge,line width=0.6pt] (axis cs:9.83,2.93) -- (axis cs:9.83,3.07);
-\draw[ink, fill=white, line width=0.8pt] (axis cs:1.60,3) circle (1.5pt);
+\draw[edge, line width=1pt] (axis cs:0.13,1) -- (axis cs:0.81,1);
+\draw[edge,line width=0.6pt] (axis cs:0.13,0.93) -- (axis cs:0.13,1.07);
+\draw[edge,line width=0.6pt] (axis cs:0.81,0.93) -- (axis cs:0.81,1.07);
+\fill[ink] (axis cs:0.32,1) circle (1.5pt);
+\draw[edge, line width=1pt] (axis cs:0.18,2) -- (axis cs:2.44,2);
+\draw[edge,line width=0.6pt] (axis cs:0.18,1.93) -- (axis cs:0.18,2.07);
+\draw[edge,line width=0.6pt] (axis cs:2.44,1.93) -- (axis cs:2.44,2.07);
+\draw[ink, fill=white, line width=0.8pt] (axis cs:0.66,2) circle (1.5pt);
+\draw[edge, line width=1pt] (axis cs:0.23,3) -- (axis cs:2.66,3);
+\draw[edge,line width=0.6pt] (axis cs:0.23,2.93) -- (axis cs:0.23,3.07);
+\draw[edge,line width=0.6pt] (axis cs:2.66,2.93) -- (axis cs:2.66,3.07);
+\draw[ink, fill=white, line width=0.8pt] (axis cs:0.77,3) circle (1.5pt);
 \nextgroupplot[title={\footnotesize Operation Flip}, yticklabels={,,}, xlabel={\footnotesize OR (log scale)}]
 \draw[edge, dashed, line width=0.6pt] (axis cs:1,0.5) -- (axis cs:1,3.5);
-\draw[edge, line width=1pt] (axis cs:0.02,1) -- (axis cs:1.09,1);
+\draw[edge, line width=1pt] (axis cs:0.02,1) -- (axis cs:0.48,1);
 \draw[edge,line width=0.6pt] (axis cs:0.02,0.93) -- (axis cs:0.02,1.07);
-\draw[edge,line width=0.6pt] (axis cs:1.09,0.93) -- (axis cs:1.09,1.07);
-\fill[ink] (axis cs:0.13,1) circle (1.5pt);
-\draw[edge, line width=1pt] (axis cs:0.08,2) -- (axis cs:20.45,2);
-\draw[edge,line width=0.6pt] (axis cs:0.08,1.93) -- (axis cs:0.08,2.07);
-\draw[edge,line width=0.6pt] (axis cs:20.45,1.93) -- (axis cs:20.45,2.07);
-\draw[ink, fill=white, line width=0.8pt] (axis cs:1.24,2) circle (1.5pt);
-\draw[edge, line width=1pt] (axis cs:0.34,3) -- (axis cs:32.37,3);
-\draw[edge,line width=0.6pt] (axis cs:0.34,2.93) -- (axis cs:0.34,3.07);
-\draw[edge,line width=0.6pt] (axis cs:32.37,2.93) -- (axis cs:32.37,3.07);
-\draw[ink, fill=white, line width=0.8pt] (axis cs:3.29,3) circle (1.5pt);
+\draw[edge,line width=0.6pt] (axis cs:0.48,0.93) -- (axis cs:0.48,1.07);
+\fill[ink] (axis cs:0.11,1) circle (1.5pt);
+\node[font=\tiny, text=edge, fill=white, inner sep=1pt] at (axis cs:1,2) {not estimable};
+\draw[edge, line width=1pt] (axis cs:0.05,3) -- (axis cs:5.78,3);
+\draw[edge,line width=0.6pt] (axis cs:0.05,2.93) -- (axis cs:0.05,3.07);
+\draw[edge,line width=0.6pt] (axis cs:5.78,2.93) -- (axis cs:5.78,3.07);
+\draw[ink, fill=white, line width=0.8pt] (axis cs:0.51,3) circle (1.5pt);
 \nextgroupplot[title={\footnotesize Semantic Logic}, yticklabels={,,}]
 \draw[edge, dashed, line width=0.6pt] (axis cs:1,0.5) -- (axis cs:1,3.5);
-\draw[edge, line width=1pt] (axis cs:0.97,1) -- (axis cs:6.54,1);
-\draw[edge,line width=0.6pt] (axis cs:0.97,0.93) -- (axis cs:0.97,1.07);
-\draw[edge,line width=0.6pt] (axis cs:6.54,0.93) -- (axis cs:6.54,1.07);
-\fill[ink] (axis cs:2.52,1) circle (1.5pt);
-\draw[edge, line width=1pt] (axis cs:0.20,2) -- (axis cs:25.46,2);
-\draw[edge,line width=0.6pt] (axis cs:0.20,1.93) -- (axis cs:0.20,2.07);
-\draw[edge,line width=0.6pt] (axis cs:25.46,1.93) -- (axis cs:25.46,2.07);
-\draw[ink, fill=white, line width=0.8pt] (axis cs:2.27,2) circle (1.5pt);
-\draw[edge, line width=1pt] (axis cs:0.06,3) -- (axis cs:15.98,3);
-\draw[edge,line width=0.6pt] (axis cs:0.06,2.93) -- (axis cs:0.06,3.07);
-\draw[edge,line width=0.6pt] (axis cs:15.98,2.93) -- (axis cs:15.98,3.07);
-\draw[ink, fill=white, line width=0.8pt] (axis cs:0.98,3) circle (1.5pt);
+\draw[edge, line width=1pt] (axis cs:0.18,1) -- (axis cs:1.09,1);
+\draw[edge,line width=0.6pt] (axis cs:0.18,0.93) -- (axis cs:0.18,1.07);
+\draw[edge,line width=0.6pt] (axis cs:1.09,0.93) -- (axis cs:1.09,1.07);
+\fill[ink] (axis cs:0.45,1) circle (1.5pt);
+\draw[edge, line width=1pt] (axis cs:0.67,2) -- (axis cs:15.92,2);
+\draw[edge,line width=0.6pt] (axis cs:0.67,1.93) -- (axis cs:0.67,2.07);
+\draw[edge,line width=0.6pt] (axis cs:15.92,1.93) -- (axis cs:15.92,2.07);
+\draw[ink, fill=white, line width=0.8pt] (axis cs:3.27,2) circle (1.5pt);
+\draw[edge, line width=1pt] (axis cs:0.87,3) -- (axis cs:20.58,3);
+\draw[edge,line width=0.6pt] (axis cs:0.87,2.93) -- (axis cs:0.87,3.07);
+\draw[edge,line width=0.6pt] (axis cs:20.58,2.93) -- (axis cs:20.58,3.07);
+\fill[ink] (axis cs:4.24,3) circle (1.5pt);
 \end{groupplot}
 \end{tikzpicture}
 \caption{Multivariable logistic regression odds ratios for fault survival, with 95\% CIs
-(Claude Sonnet 4.6; one model fit per strategy, exact values in Table~\ref{tab:logit_master}).
-Dashed line marks OR $=1$ (no effect); filled markers denote $p<0.10$, hollow markers
-$p\geq0.10$. On Claude, all three Direct-strategy estimates clear $p<0.10$ (early-stage
-faults survive less; operation-flip and semantic-logic faults survive more), while no
-CoT or Rubric estimate does. This pattern is Claude-specific: on Qwen (Table~\ref{tab:logit_master})
-Rubric/Semantic-Logic also clears $p<0.10$ (OR $=4.24$), and Direct/Semantic-Logic does
-not ($p=0.4642$).}\label{fig:forest}
+(Qwen 2.5 72B Instruct; one model fit per strategy, exact values in
+Table~\ref{tab:logit_master}). Dashed line marks OR $=1$ (no effect); filled markers denote
+$p<0.10$, hollow markers $p\geq0.10$. We plot the Qwen block rather than Claude because
+Claude retains only eight surviving faults after verification, too few to estimate these
+effects: every Claude confidence interval spans an order of magnitude in both directions
+and none reaches $p<0.10$ (Table~\ref{tab:logit_master}). On Qwen, all three
+Direct-strategy estimates clear $p<0.10$ --- plan-stage faults survive less often than
+solver-stage ones (OR $=0.32$), and operation flips survive least of the three error types
+(OR $=0.11$) --- whereas under CoT and Rubric only Rubric/Semantic-Logic does
+(OR $=4.24$, $p=0.0732$). Operation flip under CoT is omitted: no fault of that type
+survived, so the estimate diverges.}\label{fig:forest}
 \end{figure}
 
 \subsection{Master Causal Error Defense Matrix}
@@ -1160,20 +1219,20 @@ and Figure~\ref{fig:heatmap}, including the verifier-ablated propagation rate fo
 \textbf{Error Type} & \textbf{Stage} & Catch\% & Corr\% & Prop\% & Catch\% & Corr\% & Prop\% & Catch\% & Corr\% & Prop\% & Ablated Prop\% \\
 \midrule
 \multicolumn{12}{l}{\textbf{Claude Sonnet 4.6}} \\
-Number swap    & Plan   & 4.9\%  & 0.0\%  & 7.3\%  & 5.3\%  & 100\% & 0.0\% & 4.1\%  & 100\% & 0.0\% & 9.5\% \\
-Number swap    & Solver & 19.6\% & 77.8\% & 8.7\%  & 19.6\% & 88.9\%& 2.2\% & 24.4\% & 100\% & 2.2\% & 12.2\% \\
-Operation flip & Plan   & 0.0\%  & 0\%    & 2.6\%  & 0.0\%  & 0\%   & 2.9\% & 0.0\%  & 0\%   & 4.8\% & 2.4\% \\
-Operation flip & Solver & 0.0\%  & 0\%    & 0.0\%  & 0.0\%  & 0\%   & 0.0\% & 2.1\%  & 100\% & 2.1\% & 0.0\% \\
-Semantic logic & Plan   & 15.0\% & 77.8\% & 5.0\%  & 17.0\% & 87.5\%& 2.1\% & 14.3\% & 85.7\%& 2.0\% & 12.5\% \\
-Semantic logic & Solver & 82.6\% & 63.2\% & 30.4\% & 88.9\% & 97.5\%& 2.2\% & 83.0\% & 100\% & 0.0\% & 80.0\% \\
+Number swap    & Plan   & 4.9\%  & 100\% & 2.4\% & 5.3\%  & 100\% & 0.0\% & 4.1\%  & 100\% & 0.0\% & 9.5\% \\
+Number swap    & Solver & 19.6\% & 100\% & 4.3\% & 19.6\% & 100\% & 0.0\% & 24.4\% & 100\% & 2.2\% & 12.2\% \\
+Operation flip & Plan   & 0.0\%  & 0\%   & 2.6\% & 0.0\%  & 0\%   & 2.9\% & 0.0\%  & 0\%   & 4.8\% & 2.4\% \\
+Operation flip & Solver & 0.0\%  & 0\%   & 0.0\% & 0.0\%  & 0\%   & 0.0\% & 2.1\%  & 100\% & 2.1\% & 0.0\% \\
+Semantic logic & Plan   & 15.0\% & 88.9\%& 3.3\% & 17.0\% & 87.5\%& 2.1\% & 14.3\% & 85.7\%& 2.0\% & 12.5\% \\
+Semantic logic & Solver & 82.6\% & 94.7\%& 4.3\% & 88.9\% & 97.5\%& 2.2\% & 83.0\% & 100\% & 0.0\% & 80.0\% \\
 \midrule
 \multicolumn{12}{l}{\textbf{Qwen 2.5 72B Instruct}} \\
-Number swap    & Plan   & 5.9\%  & 0.0\%  & 5.9\%  & 4.5\%  & 50.0\%& 2.3\% & 4.3\%  & 50.0\%& 4.3\% & 5.4\% \\
-Number swap    & Solver & 86.4\% & 78.9\% & 18.2\% & 23.5\% & 100\% & 2.9\% & 80.0\% & 100\% & 0.0\% & 7.1\% \\
-Operation flip & Plan   & 4.9\%  & 100\%  & 0.0\%  & 2.6\%  & 100\% & 0.0\% & 2.8\%  & 0.0\% & 2.8\% & 11.1\% \\
-Operation flip & Solver & 10.8\% & 75.0\% & 2.7\%  & 0.0\%  & 0.0\% & 0.0\% & 2.2\%  & 100\% & 0.0\% & 2.1\% \\
-Semantic logic & Plan   & 14.0\% & 57.1\% & 6.0\%  & 8.5\%  & 50.0\%& 6.4\% & 0.0\%  & 0.0\% & 4.4\% & 9.4\% \\
-Semantic logic & Solver & 81.8\% & 94.4\% & 11.4\% & 82.4\% & 97.6\%& 9.8\% & 73.8\% & 90.3\%& 14.3\%& 77.8\% \\
+Number swap    & Plan   & 8.6\%  & 0.0\% & 8.6\% & 4.5\%  & 50.0\%& 2.3\% & 4.3\%  & 50.0\%& 4.3\% & 5.4\% \\
+Number swap    & Solver & 86.4\% & 65.8\%& 29.5\%& 23.5\% & 100\% & 2.9\% & 80.0\% & 100\% & 0.0\% & 7.1\% \\
+Operation flip & Plan   & 4.9\%  & 100\% & 0.0\% & 2.6\%  & 100\% & 0.0\% & 2.8\%  & 0.0\% & 2.8\% & 11.1\% \\
+Operation flip & Solver & 13.2\% & 60.0\%& 5.3\% & 0.0\%  & 0.0\% & 0.0\% & 2.2\%  & 100\% & 0.0\% & 2.1\% \\
+Semantic logic & Plan   & 14.0\% & 42.9\%& 8.0\% & 8.5\%  & 50.0\%& 6.4\% & 0.0\%  & 0.0\% & 4.4\% & 9.4\% \\
+Semantic logic & Solver & 81.8\% & 94.4\%& 11.4\%& 82.4\% & 97.6\%& 9.8\% & 73.8\% & 90.3\%& 14.3\%& 77.8\% \\
 \bottomrule
 \end{tabular}%
 }
@@ -1189,15 +1248,15 @@ This appendix provides concise, point-form answers to the specific secondary res
 \subsection{Fault Severity \& Sensitivity Dynamics}
 \begin{itemize}
     \item \textbf{Injection Stage Dominance:} The injection stage (planning vs. execution) is the primary determinant of fault propagation. Fault severity (mild, moderate, severe) plays a secondary, non-monotonic role.
-    \item \textbf{Direct Verifier Sensitivity:} Under Direct verification, verifiers exhibit noisy sensitivity to numerical slip magnitude (e.g., solver-stage number-swap propagation on Claude is 0.0\% for mild, 18.8\% for moderate, and 7.7\% for severe; on Qwen, 9.1\% mild, 20.0\% moderate, 22.2\% severe).
-    \item \textbf{Structured Verifier Neutralization:} Deploying Chain-of-Thought (CoT) or Rubric verification substantially neutralizes numerical severity effects, suppressing propagation for mild and moderate number swaps to \textbf{0.0\%} in most strata, with isolated exceptions reaching \textbf{5.6\%--6.7\%} (Table~\ref{tab:master_strategy}).
+    \item \textbf{Direct Verifier Sensitivity:} Under Direct verification, verifiers show no monotonic sensitivity to numerical slip magnitude. Solver-stage number-swap propagation on Claude is 0.0\% for mild, 12.5\% for moderate, and 0.0\% for severe; on Qwen it is 18.2\% mild, 33.3\% moderate, and 33.3\% severe. Each stratum contains only 11--18 injections, so these differences are not separable from sampling noise and we draw no ordering conclusion from them.
+    \item \textbf{Structured Verifier Neutralization:} Chain-of-Thought (CoT) and Rubric verification suppress number-swap propagation to \textbf{0.0\%} in 10 of 12 Claude severity strata and 9 of 12 Qwen strata. The exceptions are Rubric on moderate solver-stage swaps for Claude (6.7\%), and, for Qwen, CoT on moderate plan-stage swaps (5.6\%), CoT on severe solver-stage swaps (9.1\%), and Rubric on severe plan-stage swaps (12.5\%). Correction precision on caught number swaps is \textbf{100.0\%} across every Claude stratum (Table~\ref{tab:master_strategy}).
 \end{itemize}
 
 \subsection{Computational Overhead of Structured Verification}
 \begin{itemize}
     \item \textbf{Multi-Agent Baseline Overhead:} Moving from a single-agent baseline (Condition A) to a clean multi-agent pipeline (Condition B) increases total token cost per solved problem by \textbf{$3.1\times$} on Claude (526 to 1,616 tokens) and \textbf{$2.2\times$} on Qwen (737 to 1,623 tokens).
-    \item \textbf{Verifier Stage Overhead:} Structured prompting (CoT and Rubric) increases token consumption at the verifier stage by \textbf{30\%--50\%} relative to Direct verification.
-    \item \textbf{Pipeline Token Overhead:} Because verification represents only one stage of the pipeline, CoT and Rubric prompting add only a modest \textbf{23\%--37\%} total token cost per problem (Table~\ref{tab:master_cost}).
+    \item \textbf{Verifier Stage Overhead:} Structured prompting (CoT and Rubric) increases token consumption at the verifier stage by \textbf{52\%--96\%} relative to Direct verification.
+    \item \textbf{Pipeline Token Overhead:} Because verification represents only one stage of the pipeline, CoT and Rubric prompting add only a modest \textbf{24\%--37\%} total token cost per problem (Table~\ref{tab:master_cost}).
 \end{itemize}
 
 \end{document}

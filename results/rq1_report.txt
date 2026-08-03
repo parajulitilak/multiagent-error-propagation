@@ -1,33 +1,33 @@
 === Accuracy with 95% bootstrap CI ===
   A: 0.655  [0.590, 0.720]  n=200
   B: 0.695  [0.630, 0.760]  n=200
-  C1: 0.665  [0.600, 0.730]  n=200
-  C2: 0.605  [0.540, 0.670]  n=200
+  C1: 0.680  [0.615, 0.745]  n=200
+  C2: 0.675  [0.610, 0.740]  n=200
   D1: 0.645  [0.580, 0.710]  n=200
   D2: 0.515  [0.445, 0.585]  n=200
 
 === McNemar exact (paired), Holm-Bonferroni corrected ===
   A:B: {'n_pairs': 200, 'n01_B_better': 9, 'n10_A_better': 1, 'p_value': np.float64(0.021484375)}  p_holm=0.0645
-  B:C1: {'n_pairs': 200, 'n01_B_better': 1, 'n10_A_better': 7, 'p_value': np.float64(0.0703125)}  p_holm=0.1406
-  C1:D1: {'n_pairs': 200, 'n01_B_better': 5, 'n10_A_better': 9, 'p_value': np.float64(0.4239501953125)}  p_holm=0.4240
-  C2:D2: {'n_pairs': 200, 'n01_B_better': 13, 'n10_A_better': 31, 'p_value': np.float64(0.009559878856634896)}  p_holm=0.0382
+  B:C1: {'n_pairs': 200, 'n01_B_better': 1, 'n10_A_better': 4, 'p_value': np.float64(0.375)}  p_holm=0.3750
+  C1:D1: {'n_pairs': 200, 'n01_B_better': 3, 'n10_A_better': 10, 'p_value': np.float64(0.09228515625)}  p_holm=0.1846
+  C2:D2: {'n_pairs': 200, 'n01_B_better': 3, 'n10_A_better': 35, 'p_value': np.float64(6.677873898297548e-08)}  p_holm=0.0000
 
 === Error fate (injected conditions vs clean B) ===
-  C1: {'n_valid_injections': 139, 'absorbed_without_flag': 125, 'caught_and_corrected': 7, 'silently_propagated': 3, 'caught_not_corrected': 4, 'propagation_rate': 0.050359712230215826, 'propagation_wilson95': (0.025, 0.1), 'injection_types': {'semantic_logic_error': '60/139 (43.2%)', 'operation_flip': '38/139 (27.3%)', 'number_swap': '41/139 (29.5%)'}, 'severity_propagation': {'mild': '1/9 (11.1%)', 'moderate': '1/17 (5.9%)', 'severe': '1/15 (6.7%)'}, 'catch_rate': 0.07913669064748201, 'catch_wilson95': (0.045, 0.136), 'correction_rate': 0.6363636363636364, 'correction_wilson95': (0.354, 0.848)}
-  C2: {'n_valid_injections': 139, 'caught_and_corrected': 31, 'caught_not_corrected': 16, 'absorbed_without_flag': 90, 'silently_propagated': 2, 'propagation_rate': 0.12949640287769784, 'propagation_wilson95': (0.084, 0.195), 'injection_types': {'semantic_logic_error': '46/139 (33.1%)', 'operation_flip': '47/139 (33.8%)', 'number_swap': '46/139 (33.1%)'}, 'severity_propagation': {'mild': '0/17 (0.0%)', 'moderate': '3/16 (18.8%)', 'severe': '1/13 (7.7%)'}, 'catch_rate': 0.3381294964028777, 'catch_wilson95': (0.265, 0.42), 'correction_rate': 0.6595744680851063, 'correction_wilson95': (0.517, 0.778)}
+  C1: {'n_valid_injections': 139, 'absorbed_without_flag': 125, 'caught_and_corrected': 10, 'silently_propagated': 3, 'caught_not_corrected': 1, 'propagation_rate': 0.02877697841726619, 'propagation_wilson95': (0.011, 0.072), 'injection_types': {'semantic_logic_error': '60/139 (43.2%)', 'operation_flip': '38/139 (27.3%)', 'number_swap': '41/139 (29.5%)'}, 'severity_propagation': {'mild': '0/9 (0.0%)', 'moderate': '1/17 (5.9%)', 'severe': '0/15 (0.0%)'}, 'catch_rate': 0.07913669064748201, 'catch_wilson95': (0.045, 0.136), 'correction_rate': 0.9090909090909091, 'correction_wilson95': (0.623, 0.984)}
+  C2: {'n_valid_injections': 139, 'caught_and_corrected': 45, 'absorbed_without_flag': 90, 'caught_not_corrected': 2, 'silently_propagated': 2, 'propagation_rate': 0.02877697841726619, 'propagation_wilson95': (0.011, 0.072), 'injection_types': {'semantic_logic_error': '46/139 (33.1%)', 'operation_flip': '47/139 (33.8%)', 'number_swap': '46/139 (33.1%)'}, 'severity_propagation': {'mild': '0/17 (0.0%)', 'moderate': '2/16 (12.5%)', 'severe': '0/13 (0.0%)'}, 'catch_rate': 0.3381294964028777, 'catch_wilson95': (0.265, 0.42), 'correction_rate': 0.9574468085106383, 'correction_wilson95': (0.858, 0.988)}
   D1: {'n_valid_injections': 139, 'absorbed': 127, 'propagated': 12, 'propagation_rate': 0.08633093525179857, 'propagation_wilson95': (0.05, 0.145), 'injection_types': {'semantic_logic_error': '56/139 (40.3%)', 'operation_flip': '41/139 (29.5%)', 'number_swap': '42/139 (30.2%)'}, 'severity_propagation': {'mild': '0/11 (0.0%)', 'moderate': '2/16 (12.5%)', 'severe': '2/15 (13.3%)'}}
   D2: {'n_valid_injections': 139, 'propagated': 38, 'absorbed': 101, 'propagation_rate': 0.2733812949640288, 'propagation_wilson95': (0.206, 0.353), 'injection_types': {'semantic_logic_error': '40/139 (28.8%)', 'operation_flip': '50/139 (36.0%)', 'number_swap': '49/139 (35.3%)'}, 'severity_propagation': {'mild': '5/20 (25.0%)', 'moderate': '1/12 (8.3%)', 'severe': '0/17 (0.0%)'}}
 
 === Fault survival logit (H2): odds ratios ===
-intercept: OR=0.14 [0.06, 0.30]  p=0.0000  (n=278)
-  early_stage: OR=0.28 [0.11, 0.72]  p=0.0084  (n=278)
-  operation_flip: OR=0.13 [0.02, 1.09]  p=0.0596  (n=278)
-  semantic_logic_error: OR=2.52 [0.97, 6.54]  p=0.0571  (n=278)
+intercept: OR=0.04 [0.01, 0.14]  p=0.0000  (n=278)
+  early_stage: OR=0.94 [0.23, 3.86]  p=0.9280  (n=278)
+  operation_flip: OR=0.33 [0.03, 3.27]  p=0.3450  (n=278)
+  semantic_logic_error: OR=1.10 [0.24, 5.11]  p=0.8984  (n=278)
 
 === Token cost ===
   A: 68966 tokens total, 526 per solved problem
   B: 224660 tokens total, 1616 per solved problem
-  C1: 232052 tokens total, 1745 per solved problem
-  C2: 228899 tokens total, 1892 per solved problem
+  C1: 232052 tokens total, 1706 per solved problem
+  C2: 228899 tokens total, 1696 per solved problem
   D1: 132518 tokens total, 1027 per solved problem
   D2: 126615 tokens total, 1229 per solved problem
