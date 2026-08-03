@@ -28,7 +28,9 @@
 \usepackage[colorlinks=true, citecolor=blue, urlcolor=blue, linkcolor=blue]{hyperref}
 \usepackage{caption}
 \captionsetup{labelsep=period,font=small}
-\usepackage[numbers,square,sort&compress]{natbib}
+% APA-style author-year citations, per the SISTER template: "(Cemri et al., 2025)"
+\usepackage[authoryear,round]{natbib}
+\bibpunct{(}{)}{;}{a}{,}{,}
 \usepackage{xcolor}
 \newcommand{\pending}[1]{\textcolor{purple}{[#1]}}
 \renewcommand{\thesection}{\Roman{section}}
@@ -636,7 +638,14 @@ Our findings suggest three practical rules for building multi-agent systems:
     \item \textbf{Add symbolic safeguards:} Pair LLM verifiers with programmatic math checks to catch operation flips that language models miss.
 \end{enumerate}
 
-\section{Limitations}\label{sec:limitations}
+\paragraph{Broader Impact.} Agent pipelines increasingly handle real-world tasks. Pinpointing where errors survive helps developers place guardrails effectively; we do not foresee direct misuse arising from these findings.
+
+\paragraph{Reproducibility.} Code, prompts, configuration, and full traces are available at: \newline
+\href{https://github.com/parajulitilak/multiagent-error-propagation}{\textcolor{blue}{\texttt{github.com/parajulitilak/multiagent-error-propagation}}}.
+
+\section{Improvements}
+
+\subsection*{Limitations of the present design}\label{sec:limitations}
 Three limitations bound how far these results should be read.
 
 \paragraph{Answer extraction is imperfect, and it is not neutral across models.}
@@ -672,13 +681,8 @@ not a sample of the errors real pipelines make --- notably they exclude hallucin
 premises, retrieval failures, and tool-use errors, and they do not cover open-ended
 generation where no gold answer exists.
 
-\paragraph{Broader Impact.} Agent pipelines increasingly handle real-world tasks. Pinpointing where errors survive helps developers place guardrails effectively; we do not foresee direct misuse arising from these findings.
-
-\paragraph{Reproducibility.} Code, prompts, configuration, and full traces are available at: \newline
-\href{https://github.com/parajulitilak/multiagent-error-propagation}{\textcolor{blue}{\texttt{github.com/parajulitilak/multiagent-error-propagation}}}.
-
-\section{Improvements}
-Our disturbances are intentionally synthetic, which helps us pinpoint their source. 
+\subsection*{Planned extensions}
+Our disturbances are intentionally synthetic, which helps us pinpoint their source.
 Naturally occurring errors are more varied. They require our operators to address mathematical 
 mistakes and logical flaws instead of, for example, hallucinations during open-ended generations. 
 We produce results based on two groups of models and one main task distribution that provide 
@@ -722,130 +726,135 @@ consistently across both.
 
 \begin{thebibliography}{99}
 
-\bibitem{cemri2025mast}
-Mert Cemri, Melissa Z. Pan, Shuyi Yang, Lakshya A. Agrawal, Bhavya Chopra,
-Rishabh Tiwari, Kurt Keutzer, Aditya Parameswaran, Dan Klein,
-Kannan Ramchandran, Matei Zaharia, Joseph E. Gonzalez, and Ion Stoica.
-\href{https://arxiv.org/abs/2503.13657}{\textcolor{blue}{Why Do Multi-Agent {LLM} Systems Fail?}}
-\textit{arXiv preprint arXiv:2503.13657}, 2025.
+\bibitem[Cemri et al.(2025)]{cemri2025mast}
+Cemri, M., Pan, M. Z., Yang, S., Agrawal, L. A., Chopra, B., Tiwari, R., Keutzer, K.,
+Parameswaran, A., Klein, D., Ramchandran, K., Zaharia, M., Gonzalez, J. E., \& Stoica, I.
+(2025). \textit{Why do multi-agent LLM systems fail?} (arXiv:2503.13657) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2503.13657}{\textcolor{blue}{https://arxiv.org/abs/2503.13657}}
 
-\bibitem{wu2023autogen}
-Qingyun Wu, Gagan Bansal, Jieyu Zhang, Yiran Wu, Beibin Li, Erkang Zhu,
-Li Jiang, Xiaoyun Zhang, Shaokun Zhang, Jiale Liu, Ahmed Hassan Awadallah,
-Ryen W. White, Doug Burger, and Chi Wang.
-\href{https://arxiv.org/abs/2308.08155}{\textcolor{blue}{{AutoGen}: Enabling Next-Gen {LLM} Applications via Multi-Agent Conversation}}
-\textit{arXiv preprint arXiv:2308.08155}, 2023.
+\bibitem[Cobbe et al.(2021)]{cobbe2021gsm8k}
+Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert, M.,
+Tworek, J., Hilton, J., Nakano, R., Hesse, C., \& Schulman, J. (2021).
+\textit{Training verifiers to solve math word problems} (arXiv:2110.14168) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2110.14168}{\textcolor{blue}{https://arxiv.org/abs/2110.14168}}
 
-\bibitem{hong2023metagpt}
-Sirui Hong, Xiawu Zheng, Jonathan Chen, Yuheng Cheng, Jinlin Wang,
-Ceyao Zhang, Zili Wang, Steven Ka Shing Yau, Zijuan Lin, Liyang Zhou,
-Chenyu Ran, Lingfeng Xiao, Chenglin Wu, and J{\"u}rgen Schmidhuber.
-\href{https://arxiv.org/abs/2308.00352}{\textcolor{blue}{{MetaGPT}: Meta Programming for a Multi-Agent Collaborative Framework}}
-\textit{arXiv preprint arXiv:2308.00352}, 2023.
+\bibitem[Dettmers et al.(2023)]{dettmers2023qlora}
+Dettmers, T., Pagnoni, A., Holtzman, A., \& Zettlemoyer, L. (2023). QLoRA: Efficient
+finetuning of quantized LLMs. \textit{Advances in Neural Information Processing Systems},
+\textit{36}.
+\href{https://arxiv.org/abs/2305.14314}{\textcolor{blue}{https://arxiv.org/abs/2305.14314}}
 
-\bibitem{li2023camel}
-Guohao Li, Hasan Hammoud, Hani Itani, Dmitrii Khizbullin, and Bernard Ghanem.
-\href{https://arxiv.org/abs/2303.17760}{\textcolor{blue}{{CAMEL}: Communicative Agents for ``Mind'' Exploration of Large Language Model Society}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Dietterich(1998)]{dietterich1998approximate}
+Dietterich, T. G. (1998). Approximate statistical tests for comparing supervised
+classification learning algorithms. \textit{Neural Computation}, \textit{10}(7),
+1895--1923.
+\href{https://doi.org/10.1162/089976698300017197}{\textcolor{blue}{https://doi.org/10.1162/089976698300017197}}
 
-\bibitem{du2023debate}
-Yilun Du, Shuang Li, Antonio Torralba, Joshua B. Tenenbaum, and Igor Mordatch.
-\href{https://arxiv.org/abs/2305.14325}{\textcolor{blue}{Improving Factuality and Reasoning in Language Models through Multiagent Debate}}
-\textit{arXiv preprint arXiv:2305.14325}, 2023.
+\bibitem[Dror et al.(2018)]{dror2018hitchhiker}
+Dror, R., Baumer, G., Shlomov, S., \& Reichart, R. (2018). The hitchhiker's guide to
+testing statistical significance in natural language processing. In \textit{Proceedings of
+the 56th Annual Meeting of the Association for Computational Linguistics} (pp. 1383--1392).
+Association for Computational Linguistics.
+\href{https://aclanthology.org/P18-1128/}{\textcolor{blue}{https://aclanthology.org/P18-1128/}}
 
-\bibitem{li2024moreagents}
-Junyou Li, Qin Zhang, Yangbin Yu, Qiang Fu, and Deheng Ye.
-\href{https://arxiv.org/abs/2402.05120}{\textcolor{blue}{More Agents Is All You Need}}
-\textit{arXiv preprint arXiv:2402.05120}, 2024.
+\bibitem[Du et al.(2023)]{du2023debate}
+Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., \& Mordatch, I. (2023).
+\textit{Improving factuality and reasoning in language models through multiagent debate}
+(arXiv:2305.14325) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2305.14325}{\textcolor{blue}{https://arxiv.org/abs/2305.14325}}
 
-\bibitem{huang2023selfcorrect}
-Jie Huang, Xinyun Chen, Swaroop Mishra, Huaixiu Steven Zheng, Adams Wei Yu,
-Xinying Song, and Denny Zhou.
-\href{https://arxiv.org/abs/2310.01798}{\textcolor{blue}{Large Language Models Cannot Self-Correct Reasoning Yet}}
-\textit{arXiv preprint arXiv:2310.01798}, 2023.
+\bibitem[Hong et al.(2023)]{hong2023metagpt}
+Hong, S., Zheng, X., Chen, J., Cheng, Y., Wang, J., Zhang, C., Wang, Z., Yau, S. K. S.,
+Lin, Z., Zhou, L., Ran, C., Xiao, L., Wu, C., \& Schmidhuber, J. (2023).
+\textit{MetaGPT: Meta programming for a multi-agent collaborative framework}
+(arXiv:2308.00352) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2308.00352}{\textcolor{blue}{https://arxiv.org/abs/2308.00352}}
 
-\bibitem{shinn2023reflexion}
-Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao.
-\href{https://arxiv.org/abs/2303.11366}{\textcolor{blue}{{Reflexion}: Language Agents with Verbal Reinforcement Learning}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Hu et al.(2021)]{hu2021lora}
+Hu, E. J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., \& Chen, W.
+(2021). \textit{LoRA: Low-rank adaptation of large language models} (arXiv:2106.09685)
+[Preprint]. arXiv.
+\href{https://arxiv.org/abs/2106.09685}{\textcolor{blue}{https://arxiv.org/abs/2106.09685}}
 
-\bibitem{madaan2023selfrefine}
-Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao,
-Sarah Wiegreffe, Uri Alon, Nouha Dziri, Shrimai Prabhumoye, Yiming Yang,
-Shashank Gupta, Bodhisattwa Prasad Majumder, Katherine Hermann,
-Sean Welleck, Amir Yazdanbakhsh, and Peter Clark.
-\href{https://arxiv.org/abs/2303.17651}{\textcolor{blue}{{Self-Refine}: Iterative Refinement with Self-Feedback}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Huang et al.(2023)]{huang2023selfcorrect}
+Huang, J., Chen, X., Mishra, S., Zheng, H. S., Yu, A. W., Song, X., \& Zhou, D. (2023).
+\textit{Large language models cannot self-correct reasoning yet} (arXiv:2310.01798)
+[Preprint]. arXiv.
+\href{https://arxiv.org/abs/2310.01798}{\textcolor{blue}{https://arxiv.org/abs/2310.01798}}
 
-\bibitem{zheng2023judge}
-Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu,
-Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric Xing, Hao Zhang,
-Joseph E. Gonzalez, and Ion Stoica.
-\href{https://arxiv.org/abs/2306.05685}{\textcolor{blue}{Judging {LLM}-as-a-{Judge} with {MT-Bench} and {Chatbot Arena}}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Li et al.(2023)]{li2023camel}
+Li, G., Hammoud, H., Itani, H., Khizbullin, D., \& Ghanem, B. (2023). CAMEL: Communicative
+agents for ``mind'' exploration of large language model society. \textit{Advances in Neural
+Information Processing Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2303.17760}{\textcolor{blue}{https://arxiv.org/abs/2303.17760}}
 
-\bibitem{wei2022cot}
-Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter,
-Fei Xia, Ed Chi, Quoc V. Le, and Denny Zhou.
-\href{https://arxiv.org/abs/2201.11903}{\textcolor{blue}{Chain-of-Thought Prompting Elicits Reasoning in Large Language Models}}
-\textit{Advances in Neural Information Processing Systems}, 35, 2022.
+\bibitem[Li et al.(2024)]{li2024moreagents}
+Li, J., Zhang, Q., Yu, Y., Fu, Q., \& Ye, D. (2024). \textit{More agents is all you need}
+(arXiv:2402.05120) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2402.05120}{\textcolor{blue}{https://arxiv.org/abs/2402.05120}}
 
-\bibitem{wang2022selfconsistency}
-Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc Le, Ed Chi, Sharan Narang,
-Aakanksha Chowdhery, and Denny Zhou.
-\href{https://arxiv.org/abs/2203.11171}{\textcolor{blue}{Self-Consistency Improves Chain of Thought Reasoning in Language Models}}
-\textit{arXiv preprint arXiv:2203.11171}, 2022.
+\bibitem[Madaan et al.(2023)]{madaan2023selfrefine}
+Madaan, A., Tandon, N., Gupta, P., Hallinan, S., Gao, L., Wiegreffe, S., Alon, U.,
+Dziri, N., Prabhumoye, S., Yang, Y., Gupta, S., Majumder, B. P., Hermann, K., Welleck, S.,
+Yazdanbakhsh, A., \& Clark, P. (2023). Self-Refine: Iterative refinement with self-feedback.
+\textit{Advances in Neural Information Processing Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2303.17651}{\textcolor{blue}{https://arxiv.org/abs/2303.17651}}
 
-\bibitem{yao2022react}
-Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran,
-Karthik Narasimhan, and Yuan Cao.
-\href{https://arxiv.org/abs/2210.03629}{\textcolor{blue}{{ReAct}: Synergizing Reasoning and Acting in Language Models}}
-\textit{arXiv preprint arXiv:2210.03629}, 2022.
+\bibitem[Shinn et al.(2023)]{shinn2023reflexion}
+Shinn, N., Cassano, F., Gopinath, A., Narasimhan, K., \& Yao, S. (2023). Reflexion:
+Language agents with verbal reinforcement learning. \textit{Advances in Neural Information
+Processing Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2303.11366}{\textcolor{blue}{https://arxiv.org/abs/2303.11366}}
 
-\bibitem{cobbe2021gsm8k}
-Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun,
-Lukasz Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton,
-Reiichiro Nakano, Christopher Hesse, and John Schulman.
-\href{https://arxiv.org/abs/2110.14168}{\textcolor{blue}{Training Verifiers to Solve Math Word Problems}}
-\textit{arXiv preprint arXiv:2110.14168}, 2021.
+\bibitem[Wang et al.(2022)]{wang2022selfconsistency}
+Wang, X., Wei, J., Schuurmans, D., Le, Q., Chi, E., Narang, S., Chowdhery, A., \& Zhou, D.
+(2022). \textit{Self-consistency improves chain of thought reasoning in language models}
+(arXiv:2203.11171) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2203.11171}{\textcolor{blue}{https://arxiv.org/abs/2203.11171}}
 
-\bibitem{yang2018hotpotqa}
-Zhilin Yang, Peng Qi, Saizheng Zhang, Yoshua Bengio, William W. Cohen,
-Ruslan Salakhutdinov, and Christopher D. Manning.
-\href{https://arxiv.org/abs/1809.09600}{\textcolor{blue}{{HotpotQA}: A Dataset for Diverse, Explainable Multi-hop Question Answering}}
-In \textit{Proceedings of EMNLP}, 2018.
+\bibitem[Wei et al.(2022)]{wei2022cot}
+Wei, J., Wang, X., Schuurmans, D., Bosma, M., Ichter, B., Xia, F., Chi, E., Le, Q. V., \&
+Zhou, D. (2022). Chain-of-thought prompting elicits reasoning in large language models.
+\textit{Advances in Neural Information Processing Systems}, \textit{35}.
+\href{https://arxiv.org/abs/2201.11903}{\textcolor{blue}{https://arxiv.org/abs/2201.11903}}
 
-\bibitem{hu2021lora}
-Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li,
-Shean Wang, Lu Wang, and Weizhu Chen.
-\href{https://arxiv.org/abs/2106.09685}{\textcolor{blue}{{LoRA}: Low-Rank Adaptation of Large Language Models}}
-\textit{arXiv preprint arXiv:2106.09685}, 2021.
+\bibitem[Wu et al.(2023)]{wu2023autogen}
+Wu, Q., Bansal, G., Zhang, J., Wu, Y., Li, B., Zhu, E., Jiang, L., Zhang, X., Zhang, S.,
+Liu, J., Awadallah, A. H., White, R. W., Burger, D., \& Wang, C. (2023).
+\textit{AutoGen: Enabling next-gen LLM applications via multi-agent conversation}
+(arXiv:2308.08155) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2308.08155}{\textcolor{blue}{https://arxiv.org/abs/2308.08155}}
 
-\bibitem{dettmers2023qlora}
-Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, and Luke Zettlemoyer.
-\href{https://arxiv.org/abs/2305.14314}{\textcolor{blue}{{QLoRA}: Efficient Finetuning of Quantized {LLMs}}}
-\textit{Advances in Neural Information Processing Systems}, 36, 2023.
+\bibitem[Xie et al.(2026)]{xie2026spark}
+Xie, Y., Zhu, C., Zhang, X., Zhu, T., Ye, D., Qi, M., Chen, H., \& Zhou, W. (2026).
+\textit{From spark to fire: Modeling and mitigating error cascades in LLM-based multi-agent
+collaboration} (arXiv:2603.04474) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2603.04474}{\textcolor{blue}{https://arxiv.org/abs/2603.04474}}
 
-\bibitem{dror2018hitchhiker}
-Rotem Dror, Gili Baumer, Segev Shlomov, and Roi Reichart.
-\href{https://aclanthology.org/P18-1128/}{\textcolor{blue}{The Hitchhiker's Guide to Testing Statistical Significance in Natural Language Processing}}
-In \textit{Proceedings of ACL}, 2018.
+\bibitem[Yang et al.(2018)]{yang2018hotpotqa}
+Yang, Z., Qi, P., Zhang, S., Bengio, Y., Cohen, W. W., Salakhutdinov, R., \& Manning, C. D.
+(2018). HotpotQA: A dataset for diverse, explainable multi-hop question answering. In
+\textit{Proceedings of the 2018 Conference on Empirical Methods in Natural Language
+Processing} (pp. 2369--2380). Association for Computational Linguistics.
+\href{https://arxiv.org/abs/1809.09600}{\textcolor{blue}{https://arxiv.org/abs/1809.09600}}
 
-\bibitem{dietterich1998approximate}
-Thomas G. Dietterich.
-\href{https://doi.org/10.1162/089976698300017197}{\textcolor{blue}{Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithms}}
-\textit{Neural Computation}, 10(7):1895--1923, 1998.
+\bibitem[Yao et al.(2022)]{yao2022react}
+Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K., \& Cao, Y. (2022).
+\textit{ReAct: Synergizing reasoning and acting in language models} (arXiv:2210.03629)
+[Preprint]. arXiv.
+\href{https://arxiv.org/abs/2210.03629}{\textcolor{blue}{https://arxiv.org/abs/2210.03629}}
 
-\bibitem{yoffe2024debunc}
-Luke Yoffe, Alfonso Amayuelas, and William Yang Wang.
-\href{https://arxiv.org/abs/2407.06426}{\textcolor{blue}{{DebUnc}: Improving Large Language Model Agent Communication With Uncertainty Metrics}}
-\textit{arXiv preprint arXiv:2407.06426}, 2024.
+\bibitem[Yoffe et al.(2024)]{yoffe2024debunc}
+Yoffe, L., Amayuelas, A., \& Wang, W. Y. (2024). \textit{DebUnc: Improving large language
+model agent communication with uncertainty metrics} (arXiv:2407.06426) [Preprint]. arXiv.
+\href{https://arxiv.org/abs/2407.06426}{\textcolor{blue}{https://arxiv.org/abs/2407.06426}}
 
-\bibitem{xie2026spark}
-Yizhe Xie, Congcong Zhu, Xinyue Zhang, Tianqing Zhu, Dayong Ye,
-Minfeng Qi, Huajie Chen, and Wanlei Zhou.
-\href{https://arxiv.org/abs/2603.04474}{\textcolor{blue}{From Spark to Fire: Modeling and Mitigating Error Cascades in {LLM}-Based Multi-Agent Collaboration}}
-\textit{arXiv preprint arXiv:2603.04474}, 2026.
+\bibitem[Zheng et al.(2023)]{zheng2023judge}
+Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li, Z.,
+Li, D., Xing, E., Zhang, H., Gonzalez, J. E., \& Stoica, I. (2023). Judging LLM-as-a-judge
+with MT-Bench and Chatbot Arena. \textit{Advances in Neural Information Processing
+Systems}, \textit{36}.
+\href{https://arxiv.org/abs/2306.05685}{\textcolor{blue}{https://arxiv.org/abs/2306.05685}}
 
 \end{thebibliography}
 
