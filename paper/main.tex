@@ -65,13 +65,18 @@ not allow one to estimate how often an early error propagates all the way to the
 what the causal role of verification is. We fill this gap using a technique borrowed from 
 software reliability engineering—controlled fault injection: a single intermediate output 
 is manipulated in a prescribed way, and its evolution is followed through the pipeline. 
-Faults are categorized into three classes of severity, and the verification stage is assessed 
-under three prompting techniques (direct, chain-of-thought, and rubric), each re-run on the 
-same set of traces. On 200 GSM-Hard problems, with cross-model replication on Claude Sonnet 4.6 
-and Qwen 2.5 72B Instruct, we contrast the single-agent baseline with clean and faulty three-stage 
-pipelines (with faults introduced in different stages), as well as ablations of the verifier
-(on plans and solvers). We rely on paired statistical analysis throughout. Code, prompts, and
-trace data are provided.
+Faults are categorized into three classes of severity, and the verification stage is assessed
+under three prompting techniques (direct, chain-of-thought, and rubric), each re-run on the
+same set of traces. On 200 GSM-Hard problems, with cross-model replication on Claude Sonnet 4.6
+and Qwen 2.5 72B Instruct, we contrast the single-agent baseline with clean and faulty three-stage
+pipelines, as well as ablations of the verifier on each stage. On Claude, injected
+execution-stage faults reached the final answer in 12.9\% of valid cases under the direct
+verifier, while planning-stage faults propagated in only 5.0\%, showing that most upstream
+errors are naturally absorbed before verification. Removing the verifier raised
+execution-stage propagation to 27.3\%, isolating a substantial causal verifier contribution;
+chain-of-thought and rubric prompting reduced that propagation further to 1.4\% and raised
+correction precision from 66.0\% under the direct verifier to 95.9\% and 100.0\%, respectively.
+We rely on paired statistical analysis throughout, and release code, prompts, and trace data.
 \newline
 \noindent\textbf{Keywords:} multi-agent systems, LLM pipelines, error propagation, fault injection, 
 verification, chain-of-thought
