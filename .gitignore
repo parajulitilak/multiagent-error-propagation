@@ -7,3 +7,13 @@ data/raw/
 results/traces_dryrun*/
 .ipynb_checkpoints/
 *.egg-info/
+
+# LaTeX build artifacts (main.pdf is a build product; main.tex is the source)
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+paper/main.pdf
