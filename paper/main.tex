@@ -56,151 +56,121 @@ Dubai Computer Science Society \& Delta Rising Foundation\\
 \maketitle
 
 \begin{abstract}
-Pipelines of specialized LLM agents (one plans, another executes, a third
-verifies) are now a default design for applied language-model systems.
-The design carries an implicit promise: later stages should absorb the
-mistakes of earlier ones. Whether they actually do is unresolved. Failure
-taxonomies built from deployed systems describe \emph{what} goes wrong but,
-being observational, cannot say how often an early error survives to the
-output or what a verification stage causally contributes. We address this
-with controlled fault injection, adapted from software reliability
-engineering: we corrupt a single intermediate output with a known, scripted
-perturbation and trace its fate through the rest of the pipeline. Faults are
-graded into three severity levels, and the verification stage is additionally
-evaluated under three prompt strategies (direct, chain-of-thought, rubric)
-replayed on identical traces. Across 200 GSM-Hard problems, with cross-model
-replication on Claude Sonnet 4.6 and Qwen 2.5 72B Instruct, we compare a
-single-agent baseline, a clean three-stage pipeline, early- and late-stage
-injection, and verifier-removed ablations of both, analyzing outcomes with
-paired statistics throughout. On Claude, injected solver-stage faults reached
-the final answer in 12.9\% of valid cases under the direct verifier, while
-plan-stage faults propagated in only 5.0\%, showing that many upstream errors
-are naturally absorbed before verification. Removing the verifier increased
-solver-stage propagation to 27.3\%, isolating a substantial causal verifier
-contribution. Verifier prompting strategy also mattered sharply: for
-solver-stage faults, chain-of-thought and rubric verification reduced
-propagation to 1.4\% and raised correction precision from 66.0\% under the
-direct verifier to 95.9\% and 100.0\%, respectively. The result is a map of
-which verifier catches which error, where it was injected, and how fault type
-and severity interact with stage boundaries and verifier design. We release
-code, prompts, and full traces.
-\medskip\noindent\textbf{Keywords:} multi-agent systems, LLM pipelines, error propagation, fault injection, verification, chain-of-thought
+Pipelines involving dedicated LLM agents for planning, execution, and verification have 
+become the standard setup for applied language-model systems. Such pipelines entail an 
+implicit assumption: downstream stages can compensate for any errors made earlier. It is 
+unclear whether this assumption is justified. Failure taxonomies built based on real-world 
+systems describe symptoms of failure (the “what”) but, due to their observational nature, do
+not allow one to estimate how often an early error propagates all the way to the output or 
+what the causal role of verification is. We fill this gap using a technique borrowed from 
+software reliability engineering—controlled fault injection: a single intermediate output 
+is manipulated in a prescribed way, and its evolution is followed through the pipeline. 
+Faults are categorized into three classes of severity, and the verification stage is assessed 
+under three prompting techniques (direct, chain-of-thought, and rubric), each re-run on the 
+same set of traces. On 200 GSM-Hard problems, with cross-model replication on Claude Sonnet 4.6 
+and Qwen 2.5 72B Instruct, we contrast the single-agent baseline with clean and faulty three-stage 
+pipelines (with faults introduced in different stages), as well as ablations of the verifier
+(on plans and solvers). We rely on paired statistical analysis throughout. Code, prompts, and
+trace data are provided.
+\newline
+\noindent\textbf{Keywords:} multi-agent systems, LLM pipelines, error propagation, fault injection, 
+verification, chain-of-thought
 \end{abstract}
 
 \section{Introduction}
 
-The unit of deployment for language models is shifting from a single model
-call to a pipeline of agents. A decomposer agent plans the task, a solver
-agent executes the plan, and a verifier agent checks the proposed solution
-against the original problem; frameworks such as AutoGen~\citep{wu2023autogen}
-and MetaGPT~\citep{hong2023metagpt} have made this pattern easy to build and,
-as a result, increasingly common. The appeal of the pattern is intuitive:
-specialization should improve performance, and a final review stage should
-catch mistakes that earlier stages miss.
+Language models are now becoming progressively modular, using different components to 
+complete tasks, rather than relying on a single call to a model. This includes a decomposer 
+agent, a solver agent to complete the plan, and a verifier agent to check the solution. 
+Building frameworks such as AutoGen~\citep{wu2023autogen} and MetaGPT~\citep{hong2023metagpt} 
+enable the construction of these modular systems. Utilizing modular components provides space 
+for specialization and includes an additional checkpoint to catch mistakes. However, the 
+actual performance of this modularity remains to be fully tested. Multi-agent debate, and 
+other coordination strategies, were reported to improve both reasoning and factuality~\citep{du2023debate}, 
+while a simple agent ensemble has been shown to improve efficacy as the number of agents in the 
+ensemble increases~\citep{li2024moreagents}. 
+\newline A large amount of literature also points to language models being poor judges of 
+their own reasoning. Without any kind of external input, self-correction is unlikely to 
+improve reasoning accuracy and is likely to decrease it~\citep{huang2023selfcorrect}. The 
+most extensive account of multi-agent system breakdowns to this date is the Multi-Agent 
+System Failure Taxonomy~\citep{cemri2025mast}, which details the different failures of 
+deployed systems. It particularly focuses on the failures that stem from the interaction of 
+different agents. It provides clear evidence for the varied and extensive nature of failures. 
+However, this solely provides evidence of the frequency of mistakes in the early stages of 
+multi-agent systems. It cannot provide any evidence for how often mistakes went unchecked in 
+the final output, nor can it provide any evidence how much of a buffer the verifier agent 
+provides.
+What lacks is an interventional measure. If an acknowledged fault is incorporated somewhere 
+along the line and the remainder of the pipeline is allowed to operate as normal, many of the 
+limitations of observational studies are resolved. What is being measured is the frequency 
+that an early error is retained in the final product. What is being measured is whether 
+retention of the error depends on the stage of the fault (planning vs execution), whether 
+retention depends on fault severity, and what the verifier actually prevents or removes. 
+Is the verifier only present when the pipeline is successful due to other external factors? 
+How does the role of the verifier change based on how the verifier is prompted?
 
-The empirical case for that promise, however, remains incomplete. On one side,
-multi-agent debate and related coordination schemes have been reported to
-improve factuality and reasoning~\citep{du2023debate}, and simple agent
-ensembling can improve performance as the number of agents
-increases~\citep{li2024moreagents}. On the other, a growing literature shows
-that language models are often weak judges of their own reasoning: without
-external feedback, self-correction frequently fails to improve reasoning
-accuracy and may even make it worse~\citep{huang2023selfcorrect}. The most
-detailed descriptive account of multi-agent breakdowns to date, the
-Multi-Agent System Failure Taxonomy (MAST)~\citep{cemri2025mast}, catalogs
-failure modes observed in deployed systems and shows that inter-agent failures
-are frequent and varied. But observational traces alone cannot identify how
-often an early-stage mistake would have survived to the final output, nor can
-they cleanly isolate how much protection a verifier stage causally provides.
+To measure these, we have adapted a method from software reliability called fault injection. 
+We will purposely introduce a fault to one of the steps in a Decomposer-Solver-Verifier 
+pipeline and allow the next steps in the pipeline process to continue without change. Since 
+the fault is purposely and known, every subsequent step is a result of an intentional fault. 
+We have designed one of three operators to mimic a true reasoning failure. In the first 
+operator, a number is substituted with a different but reasonable number (number swap), 
+which can also be graded on a pre-established severity scale. The other two operators are an 
+arithmetic operation reversal (operation flip) and an alteration of the logic or order of a 
+reasoning step (semantic logic error). All fault injections are documented with the specific 
+span that was altered.
+Under 6 paired configurations (i.e., baseline, clean three-stage pipeline, injection at the 
+decomposer and solver stages, verifier-removed versions, and two injected pipelines), our 
+main experiments sample 200 GSM-Hard problems. Because all stage outputs are stored, we can 
+replay the same experiment under different verifier prompts and compare verifier strategies 
+with the same inputs. Currently, our code allows comparisons between direct verifiers, 
+chain-of-thought verifiers, and rubric-based verifiers. We also conduct cross-model 
+replication experiments on the Qwen 2.5 72B Instruct model to determine if the qualitative 
+patterns of our main experiments are replicated in other model families. Comparisons are 
+conducted at the level of individual problems and we report interval estimates and exact 
+paired tests in addition to point estimates.
+Our thesis is that in a Decomposer-Solver-Verifier pipeline, the probability of an injected 
+fault surviving to the final answer is a function of the fault’s location and type, as well 
+as the fault’s severity, the presence of a verifier, and the prompt given to the verifier. 
+The design of our study tests each of these claims, particularly the effects of the stage (decomposer vs. solver), 
+the verifier (verifier present vs. ablated), and the verifier-strategy (direct vs. chain-of-thought vs. rubric), 
+on the injected fault, and the problem remains constant.
+This study connects four areas of research. First, agentic frameworks like AutoGen~\citep{wu2023autogen}, 
+MetaGPT~\citep{hong2023metagpt}, and CAMEL~\citep{li2023camel} have created reusable patterns for 
+developing LLM agents. The Decomposer, Solver, and Verifier pipeline we examine is the 
+simplest version that defines planning, execution, and review as separate roles.   
+Second, previous work on debate, ensembling, and self-consistency measures reports accuracy gains~\citep{du2023debate,li2024moreagents,wang2022selfconsistency}, 
+yet it typically does not separate systems that genuinely prevent errors from those that just 
+substitute one error for another. Controlled fault injection makes it possible to observe this 
+difference.   Third, research on self-correction and verification demonstrates both the potential 
+and the limits of reflective reasoning. Reflexion~\citep{shinn2023reflexion} and Self-Refine~\citep{madaan2023selfrefine} 
+show that models can improve outputs based on feedback. However, Huang et al.~\citep{huang2023selfcorrect} reveal that, 
+without external signals, such revisions often struggle with reasoning tasks. Additionally, 
+LLM judgments have known biases~\citep{zheng2023judge}. Therefore, our verifier ablation and 
+replay design evaluate not just whether review happens but also how much it impacts the 
+outcome of a known fault under the same conditions.   Finally, MAST~\citep{cemri2025mast} 
+offers a terminology for multi-agent failure, while recent mitigation systems like DebUnc~\citep{yoffe2024debunc} and graph-based 
+governance methods~\citep{xie2026spark} are based on the idea that upstream errors lead to 
+downstream issues. Our study directly tests this idea and measures when it is valid.
 
-What is missing is an interventional measurement. If a known fault is inserted
-at a chosen stage and the rest of the pipeline is allowed to proceed normally,
-questions left open by observational work become directly measurable: How
-often does an early mistake survive to the final answer? Does survival depend
-on whether the fault is introduced in planning or execution? Does severity
-matter? How much does a verifier actually prevent, rather than merely being
-present when the pipeline succeeds for other reasons? And how much does that
-depend on how the verifier is prompted?
+\textbf{Contributions:}
 
-We address these questions with controlled fault injection, adapted from
-software reliability engineering. We corrupt exactly one intermediate artifact
-in a Decomposer--Solver--Verifier pipeline and then let the remaining stages
-run unchanged. The injected fault is known by construction, so every
-downstream effect can be attributed to a specific intervention. We study three
-operators designed to mimic realistic reasoning failures: \emph{number swap},
-which replaces a quantity with a wrong but plausible value; \emph{operation
-flip}, which reverses an arithmetic operation; and \emph{semantic logic
-error}, which perturbs the order or logic of a reasoning step without merely
-changing a numeral or operator. Number swaps are graded into pre-registered
-severity levels (\emph{mild}, \emph{moderate}, \emph{severe}), and all
-injections are logged with the exact changed span.
+(i)~A fault-injection approach with control over error propagation measurement within the 
+agent pipeline of LLMs, which uses repeatable fault injection operators and pre-registered 
+severity ranges.
 
-Our main experiments use a fixed sample of 200 GSM-Hard problems under six
-paired conditions: a single-agent baseline, a clean three-stage pipeline,
-injection at the decomposer stage, injection at the solver stage, and
-verifier-removed versions of both injected pipelines. Because all stage
-outputs are stored, the same traces can be replayed under alternative verifier
-prompts, allowing direct comparison of verifier strategies on identical
-inputs. In the current codebase, this enables comparison among a direct
-verifier, a chain-of-thought verifier, and a rubric-based verifier. We also
-include cross-model replication runs on Qwen 2.5 72B Instruct to test whether
-the main qualitative patterns hold beyond the primary model family. All
-comparisons are paired at the problem level, and we report interval estimates
-and exact paired tests rather than point estimates alone.
+(ii)~Quantitative measures of propagation, catching, and correction rates using paired 
+comparisons, showing the effect of the injection stage, fault type, and fault severity.
 
-Our thesis is falsifiable: in a Decomposer--Solver--Verifier pipeline, the
-probability that an injected fault survives to the final answer depends on
-where the fault is introduced, what type of fault it is, how severe it is,
-whether a verifier is present, and how that verifier is prompted. The study's
-experimental design tests each of those claims directly. In particular, it
-separates stage effects (decomposer versus solver), verifier effects
-(verifier present versus ablated), and verifier-strategy effects (direct
-versus chain-of-thought versus rubric) while holding the underlying problems
-and injected faults fixed.
+(iii)~An ablation experiment with the verifier to measure the contribution of the verification
+stage by comparing runs with and without verifiers.
 
-This study sits at the intersection of four lines of work. First, agentic
-frameworks such as AutoGen~\citep{wu2023autogen}, MetaGPT~\citep{hong2023metagpt},
-and CAMEL~\citep{li2023camel} established reusable patterns for composing LLM
-agents; the Decomposer--Solver--Verifier pipeline we study is the smallest
-instance that captures planning, execution, and review as distinct roles.
-Second, prior work on debate, ensembling, and self-consistency measures
-aggregate accuracy gains~\citep{du2023debate,li2024moreagents,wang2022selfconsistency},
-but usually does not distinguish between systems that truly prevent errors and
-systems that merely replace one error with another. Controlled fault injection
-makes that distinction observable. Third, work on self-correction and
-verification shows both the promise and the limitations of reflective
-reasoning: Reflexion~\citep{shinn2023reflexion} and
-Self-Refine~\citep{madaan2023selfrefine} show that models can revise outputs
-given feedback, while Huang et~al.~\citep{huang2023selfcorrect} show that,
-without external signals, such revision often fails on reasoning tasks; LLM
-judging also carries known biases~\citep{zheng2023judge}. Our verifier
-ablation and replay design therefore measure not just whether review exists,
-but how much it changes the fate of a known fault under identical inputs.
-Finally, MAST~\citep{cemri2025mast} provides a vocabulary for multi-agent
-failure, while recent mitigation systems such as DebUnc~\citep{yoffe2024debunc}
-and graph-based governance approaches~\citep{xie2026spark} are motivated by
-the assumption that upstream errors propagate downstream. Our study tests that
-assumption directly and quantifies when it holds.
+(iv)~Strategy-level analysis of the verification stage through comparison of different 
+verifier prompt strategies (direct, chain of thought, and rubric) using the same stored trace
+for different fault types, severities, and injection stages.
 
-\textbf{Contributions.}
-
-(i)~A controlled fault-injection methodology for measuring error propagation
-in LLM agent pipelines, with reproducible perturbation operators and
-pre-registered severity bands.
-
-(ii)~Quantitative estimates of propagation, catch, and correction rates under
-paired comparisons, including effects of injection stage, fault type, and
-fault severity.
-
-(iii)~A verifier ablation that isolates the causal contribution of the
-verification stage by comparing matched runs with and without a verifier.
-
-(iv)~A strategy-level map of verification, comparing direct,
-chain-of-thought, and rubric-based verifier prompts on identical stored
-traces across error types, severities, and injection stages.
-
-(v)~A released codebase with prompts, configurations, analysis scripts, and
-trace artifacts sufficient to reproduce the reported measurements.
+(v)~Open source software that contains the prompts, configurations, analyses, and traces to 
+reproduce our experiments.
 
 \section{Methods}
 
@@ -660,48 +630,41 @@ Our findings suggest three practical rules for building multi-agent systems:
 \href{https://github.com/parajulitilak/multiagent-error-propagation}{\textcolor{blue}{\texttt{github.com/parajulitilak/multiagent-error-propagation}}}.
 
 \section{Improvements}
-Our perturbations are synthetic by design; this is what makes origin
-attribution exact, but naturally arising errors are more varied, and our
-operators cover arithmetic slips and structured logic faults rather than,
-for example, factual hallucinations in open-ended generation. Results are
-reported across two model families and one primary task distribution with
-objectively checkable answers; propagation dynamics on open-ended tasks may
-differ. The verifier prompts are representative rather than exhaustively
-tuned, so our estimates of verification benefit should be read as
-typical-configuration, not best-achievable. The study was designed and
-executed within a four-week program.
-
-Several extensions would strengthen the study, in rough order of value:
-expanding the protocol to additional task distributions beyond GSM-Hard;
-broadening semantic fault injection so that contradictions, omitted
-constraints, and fabricated entities are more systematically covered;
-tightening the solver prompt's plan adherence, so that plan-stage faults are
-not absorbed by silent re-derivation and the planning-stage estimate is
-sharpened; comparing a small verifier fine-tuned with QLoRA~\citep{dettmers2023qlora}
-on the released traces against the LLM judge, to test whether low-cost
-specialized oversight can match it; investigating dynamic verifier gating
-(e.g., only invoking the more expensive chain-of-thought or rubric verifiers
-when the solver expresses high uncertainty) to optimize the token cost budget;
-and evaluating learned inter-agent
-gating in the style of DebUnc~\citep{yoffe2024debunc} under our injection
-protocol, which would connect the measurement in this paper to the
-mitigation literature it motivates.
+Our disturbances are intentionally synthetic, which helps us pinpoint their source. 
+Naturally occurring errors are more varied. They require our operators to address mathematical 
+mistakes and logical flaws instead of, for example, hallucinations during open-ended generations. 
+We produce results based on two groups of models and one main task distribution that provide 
+clear, verifiable outputs. We also understand that open-ended task dynamics may differ. The 
+verifier prompts have been loosely designed, if at all, to optimize, and they represent only 
+a rough configuration. The study was completed in four weeks. 
+\newline The study could benefit in the following rough order of impact, based on the outlined 
+extensions: expanding the protocol to other task distributions beyond GSM-Hard, broadening 
+semantic fault injection to more systematically include contradictions and omissions as well 
+as hallucinated constructs, refining the solver prompt to directly eliminate the absorption 
+of planning stage faults through a silent re-derivation, thus improving the length estimation 
+for the planning stage prompt, assessing how effectively an economical fine-tuning of a small 
+verifier, using QLoRA~\citep{dettmers2023qlora}, impacts the provided tracing as a counterpart 
+to the LLM judge, exploring the cost-benefit of token use with more complex verifiers where 
+a chain of thought or rubric is only applied when the solver shows significant uncertainty, and 
+investigating the DebUnc~\citep{yoffe2024debunc} model, which applies inter-agent Gating within 
+our disturbance framework, creating a valuable connection between the mitigation structure and 
+measurement discussed in this paper.
 
 \section{Evaluation}
-We assess the design against the standard threats to validity.
-\emph{Internal validity}: all contrasts are paired on the same fixed,
+We assess the design against the standard threats to validity. \newline
+\textbf{Internal validity}: All contrasts are paired on the same fixed,
 seeded problem sample; every injection is validated and its full record
-released, so any reader can audit the treatment. \emph{Construct validity}:
-propagation is measured only on problems the clean pipeline solves
+released, so any reader can audit the treatment. \newline \textbf{Construct validity}:
+Propagation is measured only on problems the clean pipeline solves
 correctly, so a wrong final answer under injection is attributable to the
 fault rather than to baseline inability, and absorption is reported as its
-own fate rather than folded into success. \emph{Statistical validity}: exact
+own fate rather than folded into success. \newline \textbf{Statistical validity}: Exact
 paired tests, Wilson and bootstrap intervals, and Holm correction over the
-pre-registered contrast family~\citep{dror2018hitchhiker}. \emph{External
-validity}: results cover one primary reasoning dataset with objectively
+pre-registered contrast family~\citep{dror2018hitchhiker}. \newline \textbf{External
+validity}: Results cover one primary reasoning dataset with objectively
 checkable answers and two model families; replication on both Claude Sonnet
 4.6 and Qwen 2.5 72B Instruct tests whether the observed propagation
-patterns depend on a single model. All conclusions in this paper are drawn
+patterns depend on a single model. \newline All conclusions in this paper are drawn
 from these deterministic primary runs (temperature 0) and are stated only where the outcomes
 across both model families agree.
 
